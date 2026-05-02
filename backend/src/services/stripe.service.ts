@@ -61,27 +61,40 @@ class StripeService {
   }
 
   /**
+   * Create a customer portal session
+   */
+  async createPortalSession(userId: string) {
+    const customerId = await this.getOrCreateCustomer(userId);
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${process.env.FRONTEND_URL}/dashboard/billing`,
+    });
+
+    return session;
+  }
+
+  /**
    * Cancel a subscription
    */
   async cancelSubscription(userId: string) {
-    const user = await User.findById(userId);
-    if (!user || !user.subscription.stripeSubscriptionId) {
+    const subscription = await Subscription.findOne({ userId, status: { $ne: 'cancelled' } });
+    if (!subscription || !subscription.stripeSubscriptionId) {
       throw new Error('No active Stripe subscription found');
     }
 
-    const subscription = await stripe.subscriptions.update(user.subscription.stripeSubscriptionId, {
+    const stripeSub = await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
       cancel_at_period_end: true,
     });
 
-    await Subscription.findOneAndUpdate(
-      { userId },
-      { cancelAtPeriodEnd: true }
-    );
+    subscription.cancelAtPeriodEnd = true;
+    await subscription.save();
 
-    user.subscription.status = 'cancelled';
-    await user.save();
+    await User.findByIdAndUpdate(userId, {
+      'subscription.status': 'cancelled', // Or maintain 'active' but with cancelAtPeriodEnd
+    });
 
-    return subscription;
+    return stripeSub;
   }
 
   /**

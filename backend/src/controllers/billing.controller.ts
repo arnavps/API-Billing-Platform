@@ -73,15 +73,26 @@ class BillingController {
 
       if (gateway === 'stripe') {
         await StripeService.cancelSubscription(userId);
+      } else if (gateway === 'razorpay') {
+        await RazorpayService.cancelSubscription(userId);
       } else {
-        // Razorpay cancellation logic
-        const user = await (req as any).user;
-        if (user.subscription.razorpaySubscriptionId) {
-          // Implement Razorpay cancellation if needed
-        }
+        return res.status(400).json({ message: 'Invalid gateway' });
       }
 
       res.json({ message: 'Subscription cancelled successfully' });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Create Billing Portal Session
+   */
+  async createPortal(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user.id;
+      const session = await StripeService.createPortalSession(userId);
+      res.json({ url: session.url });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

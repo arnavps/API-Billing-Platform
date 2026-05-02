@@ -119,6 +119,24 @@ class RazorpayService {
       await user.save();
     }
   }
+
+  async cancelSubscription(userId: string) {
+    const subscription = await Subscription.findOne({ userId, status: { $ne: 'cancelled' } });
+    if (!subscription || !subscription.razorpaySubscriptionId) {
+      throw new Error('No active Razorpay subscription found');
+    }
+
+    // Razorpay subscriptions can be cancelled immediately or at the end of cycle
+    // Here we cancel immediately for simplicity, but could be end of cycle
+    await this.razorpay.subscriptions.cancel(subscription.razorpaySubscriptionId);
+
+    subscription.status = 'cancelled';
+    await subscription.save();
+
+    await User.findByIdAndUpdate(userId, {
+      'subscription.status': 'cancelled',
+    });
+  }
 }
 
 export default new RazorpayService();

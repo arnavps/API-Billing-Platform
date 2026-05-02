@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useBillingStore } from '../../store/useBillingStore';
-import { X, ShieldCheck, CreditCard, Loader2 } from 'lucide-react';
+import { useAuthStore } from '../../store/useAuthStore';
+import { X, ShieldCheck, CreditCard, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
@@ -105,7 +106,8 @@ const StripeForm = ({ plan, onSuccess, onCancel }: { plan: any, onSuccess: () =>
 
 const RazorpayCheckout = ({ plan, onSuccess, onCancel }: { plan: any, onSuccess: () => void, onCancel: () => void }) => {
   const [loading, setLoading] = useState(false);
-  const { createCheckout } = useBillingStore();
+  const { createCheckout, fetchSubscription } = useBillingStore();
+  const { user } = useAuthStore();
 
   const handleRazorpay = async () => {
     setLoading(true);
@@ -119,13 +121,13 @@ const RazorpayCheckout = ({ plan, onSuccess, onCancel }: { plan: any, onSuccess:
         name: 'MeterFlow',
         description: `Subscription: ${plan.name}`,
         order_id: data.orderId,
-        handler: function (response: any) {
-          // Verify on backend
+        handler: async function (response: any) {
+          await fetchSubscription();
           onSuccess();
         },
         prefill: {
-          name: '', // user name
-          email: '', // user email
+          name: user ? `${user.firstName} ${user.lastName}` : '',
+          email: user?.email || '',
         },
         theme: {
           color: '#3b82f6',

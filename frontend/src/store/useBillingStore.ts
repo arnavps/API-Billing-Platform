@@ -20,6 +20,8 @@ interface Subscription {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
+  stripeSubscriptionId?: string;
+  razorpaySubscriptionId?: string;
 }
 
 interface Invoice {

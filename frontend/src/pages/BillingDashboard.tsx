@@ -26,8 +26,11 @@ const BillingDashboard: React.FC = () => {
     fetchInvoices,
     fetchCurrentCycle,
     createPortal,
-    payInvoice
+    payInvoice,
+    cancelSubscription
   } = useBillingStore();
+
+  const [cancelling, setCancelling] = useState(false);
 
   const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; clientSecret: string; invoiceId: string; amount: number }>({
     isOpen: false,
@@ -54,6 +57,28 @@ const BillingDashboard: React.FC = () => {
     } catch (error) {
       console.error('Failed to open portal:', error);
       alert('Failed to open billing portal.');
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!subscription) return;
+    
+    const gateway = subscription.stripeSubscriptionId ? 'stripe' : 'razorpay';
+    const confirmMessage = gateway === 'stripe' 
+      ? 'Are you sure you want to cancel your subscription? You will still have access until the end of your billing period.'
+      : 'Are you sure you want to cancel your Razorpay subscription? This will take effect immediately.';
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setCancelling(true);
+    try {
+      await cancelSubscription(gateway);
+      alert('Subscription cancelled successfully.');
+    } catch (error: any) {
+      console.error('Cancellation failed:', error);
+      alert(error.message || 'Failed to cancel subscription.');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -128,13 +153,32 @@ const BillingDashboard: React.FC = () => {
                   )}
                 </div>
               </div>
-              <button 
-                onClick={handleManagePortal}
-                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                Manage in Stripe
-                <ExternalLink className="w-4 h-4" />
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                {subscription?.stripeSubscriptionId && (
+                  <button 
+                    onClick={handleManagePortal}
+                    className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Manage in Stripe
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                )}
+                
+                {subscription && subscription.status !== 'cancelled' && !subscription.cancelAtPeriodEnd && (
+                  <button 
+                    onClick={handleCancelSubscription}
+                    disabled={cancelling}
+                    className="flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {cancelling ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4" />
+                    )}
+                    Cancel Subscription
+                  </button>
+                )}
+              </div>
             </div>
 
             {subscription && (
