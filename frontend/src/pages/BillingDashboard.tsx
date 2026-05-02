@@ -15,6 +15,7 @@ import {
 import { motion } from 'framer-motion';
 import { PaymentModal } from '../components/billing/PaymentModal';
 import { InvoiceDetails } from '../components/billing/InvoiceDetails';
+import { EmptyState } from '../components/ui/EmptyState';
 
 const BillingDashboard: React.FC = () => {
   const { 
@@ -343,8 +344,12 @@ const BillingDashboard: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                    No billing history found.
+                  <td colSpan={5} className="px-6 py-12">
+                    <EmptyState
+                      icon={FileText}
+                      title="No invoices yet"
+                      description="Once you have active APIs and usage, your monthly invoices will appear here."
+                    />
                   </td>
                 </tr>
               )}

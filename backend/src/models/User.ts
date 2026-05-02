@@ -45,6 +45,8 @@ export interface IUser extends Document {
   verificationToken?: string;
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
+  referralCode: string;
+  referredBy?: mongoose.Types.ObjectId;
   
   matchPassword(enteredPassword: string): Promise<boolean>;
 }
@@ -134,6 +136,16 @@ const userSchema = new Schema(
     verificationToken: String,
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    referralCode: {
+      type: String,
+      unique: true,
+      index: true,
+      sparse: true, // Only if we don't generate on creation for all
+    },
+    referredBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
   },
   {
     timestamps: true,

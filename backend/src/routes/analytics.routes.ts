@@ -10,5 +10,6 @@ router.get('/overview', AnalyticsController.getOverview);
 router.get('/series', AnalyticsController.getTimeSeries);
 router.get('/endpoints', AnalyticsController.getTopEndpoints);
 router.get('/errors', AnalyticsController.getErrors);
+router.get('/forecast', AnalyticsController.getForecast);
 
 export default router;

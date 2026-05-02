@@ -5,6 +5,10 @@ import { RefreshToken } from '../models/RefreshToken';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { sendEmail } from '../utils/email';
 
+const generateReferralCode = () => {
+  return crypto.randomBytes(4).toString('hex').toUpperCase();
+};
+
 const setTokenCookies = (res: Response, refreshToken: string) => {
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
@@ -27,6 +31,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const verificationToken = crypto.randomBytes(20).toString('hex');
     const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
+    // Handle referral
+    let referrer = null;
+    if (req.body.referralCode) {
+      referrer = await User.findOne({ referralCode: req.body.referralCode.toUpperCase() });
+    }
+
     const user = await User.create({
       email,
       password,
@@ -34,6 +44,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       lastName,
       company,
       verificationToken: hashedVerificationToken,
+      referralCode: generateReferralCode(),
+      referredBy: referrer?._id,
     });
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;

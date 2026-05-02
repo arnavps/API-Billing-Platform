@@ -4,8 +4,10 @@ import axios from 'axios';
 import { API } from '../models/API';
 import { APIKey } from '../models/APIKey';
 import { APILog } from '../models/APILog';
+import { APIVersion } from '../models/APIVersion';
 import { WebhookService } from '../services/webhook.service';
 import { NotificationService } from '../services/notification.service';
+import { ActivityLogService } from '../services/activityLog.service';
 
 const slugify = (text: string) => {
   return text
@@ -64,7 +66,21 @@ export const createAPI = async (req: Request, res: Response): Promise<void> => {
       category,
       pricing,
       configuration,
+      currentVersion: '1.0.0'
     });
+
+    // Create initial version
+    const initialVersion = await APIVersion.create({
+      apiId: api._id,
+      version: '1.0.0',
+      baseUrl,
+      isDefault: true,
+      changelog: 'Initial version'
+    });
+
+    // Link version to API
+    api.versions = [initialVersion._id as any];
+    await api.save();
 
     // Automatically generate first API key (test key)
     const rawKey = generateAPIKey('test');
@@ -97,6 +113,8 @@ export const createAPI = async (req: Request, res: Response): Promise<void> => {
       actionUrl: `/dashboard/apis/${api._id}`,
       actionText: 'View API',
     });
+
+    await ActivityLogService.log(req, 'Created API', 'api', api._id, { name: api.name, slug: api.slug });
 
     res.status(201).json({
       data: {
@@ -205,6 +223,8 @@ export const updateAPI = async (req: Request, res: Response): Promise<void> => {
     }
 
     res.json({ data: api });
+
+    await ActivityLogService.log(req, 'Updated API', 'api', api._id, { updates: Object.keys(updates) });
   } catch (error: any) {
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: error.message } });
   }
@@ -228,6 +248,8 @@ export const deleteAPI = async (req: Request, res: Response): Promise<void> => {
     await API.findByIdAndDelete(id);
 
     res.json({ data: { message: 'API deleted and keys revoked successfully' } });
+
+    await ActivityLogService.log(req, 'Deleted API', 'api', id, { name: api.name });
   } catch (error: any) {
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: error.message } });
   }
@@ -381,6 +403,128 @@ export const getAPIAnalytics = async (req: Request, res: Response): Promise<void
     }
 
     res.json({ data: result });
+  } catch (error: any) {
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+};
+
+export const getAPIVersions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?._id;
+
+    const api = await API.findOne({ _id: id, userId });
+    if (!api) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'API not found' } });
+      return;
+    }
+
+    const versions = await APIVersion.find({ apiId: id }).sort({ createdAt: -1 });
+    res.json({ data: versions });
+  } catch (error: any) {
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+};
+
+export const createAPIVersion = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { version, baseUrl, changelog } = req.body;
+    const userId = req.user?._id;
+
+    const api = await API.findOne({ _id: id, userId });
+    if (!api) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'API not found' } });
+      return;
+    }
+
+    // Check if version already exists
+    const existingVersion = await APIVersion.findOne({ apiId: id, version });
+    if (existingVersion) {
+      res.status(400).json({ error: { code: 'DUPLICATE_VERSION', message: `Version ${version} already exists` } });
+      return;
+    }
+
+    const newVersion = await APIVersion.create({
+      apiId: id,
+      version,
+      baseUrl,
+      changelog,
+      isDefault: false
+    });
+
+    api.versions.push(newVersion._id as any);
+    await api.save();
+
+    res.status(201).json({ data: newVersion });
+
+    await ActivityLogService.log(req, 'Created API Version', 'api', id, { version: newVersion.version });
+  } catch (error: any) {
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+};
+
+export const updateAPIVersion = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id, versionId } = req.params;
+    const userId = req.user?._id;
+    const updates = req.body;
+
+    const api = await API.findOne({ _id: id, userId });
+    if (!api) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'API not found' } });
+      return;
+    }
+
+    const version = await APIVersion.findOneAndUpdate(
+      { _id: versionId, apiId: id },
+      updates,
+      { new: true }
+    );
+
+    if (!version) {
+      res.status(404).json({ error: { code: 'VERSION_NOT_FOUND', message: 'API version not found' } });
+      return;
+    }
+
+    res.json({ data: version });
+  } catch (error: any) {
+    res.status(500).json({ error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+};
+
+export const setCurrentVersion = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id, versionId } = req.params;
+    const userId = req.user?._id;
+
+    const api = await API.findOne({ _id: id, userId });
+    if (!api) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'API not found' } });
+      return;
+    }
+
+    const version = await APIVersion.findOne({ _id: versionId, apiId: id });
+    if (!version) {
+      res.status(404).json({ error: { code: 'VERSION_NOT_FOUND', message: 'API version not found' } });
+      return;
+    }
+
+    // Set all other versions to not default
+    await APIVersion.updateMany({ apiId: id }, { isDefault: false });
+    
+    // Set this one to default
+    version.isDefault = true;
+    await version.save();
+
+    // Update main API doc
+    api.currentVersion = version.version;
+    api.baseUrl = version.baseUrl; // Sync main baseUrl with current version
+    await api.save();
+
+    res.json({ data: { message: `Current version set to ${version.version}`, api } });
+
+    await ActivityLogService.log(req, 'Changed API Current Version', 'api', id, { version: version.version });
   } catch (error: any) {
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: error.message } });
   }

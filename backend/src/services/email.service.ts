@@ -112,6 +112,42 @@ export class EmailService {
   }
 
   /**
+   * Sends a referral invitation email.
+   */
+  static async sendReferralInvite(referrer: IUser, targetEmail: string, referralCode: string) {
+    const inviteLink = `${process.env.FRONTEND_URL}/register?ref=${referralCode}`;
+    const mailOptions = {
+      from: '"MeterFlow" <no-reply@meterflow.com>',
+      to: targetEmail,
+      subject: `${referrer.firstName} invited you to join MeterFlow`,
+      html: `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+          <h1 style="color: #0F172A; margin-bottom: 24px;">MeterFlow</h1>
+          <p style="font-size: 16px; line-height: 1.5;">Hi there!</p>
+          <p style="font-size: 16px; line-height: 1.5;"><strong>${referrer.firstName} ${referrer.lastName}</strong> is using MeterFlow to manage their API usage and billing, and they think you'd love it too.</p>
+          
+          <div style="background: #F8FAFC; padding: 24px; border-radius: 12px; margin: 24px 0; text-align: center;">
+            <p style="margin: 0 0 12px 0; font-size: 14px; color: #64748B; font-weight: bold; uppercase; tracking-wider;">Your Welcome Bonus</p>
+            <p style="margin: 0; font-size: 28px; font-weight: bold; color: #10B981;">200 Credits ($2.00)</p>
+            <p style="margin: 8px 0 0 0; font-size: 14px; color: #64748B;">When you sign up using the link below</p>
+          </div>
+
+          <p style="font-size: 16px; line-height: 1.5; margin-bottom: 24px;">MeterFlow is the usage-based billing platform for modern API companies. Scale with confidence, manage quotas, and automate your revenue.</p>
+          
+          <a href="${inviteLink}" style="display: inline-block; background: #0F172A; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; text-align: center; width: 100%; box-sizing: border-box;">Accept Invitation</a>
+          
+          <p style="margin-top: 32px; font-size: 12px; color: #94A3B8; text-align: center;">
+            You received this because ${referrer.email} invited you. <br />
+            © 2026 MeterFlow Inc. All rights reserved.
+          </p>
+        </div>
+      `,
+    };
+
+    return this.transporter.sendMail(mailOptions);
+  }
+
+  /**
    * Generic send method for notifications and other simple emails.
    */
   static async send(to: string, subject: string, data: any) {

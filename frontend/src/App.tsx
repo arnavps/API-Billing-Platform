@@ -16,6 +16,10 @@ import Plans from './pages/Plans';
 import BillingDashboard from './pages/BillingDashboard';
 import StripeSuccess from './pages/StripeSuccess';
 import RealTimeDashboard from './pages/dashboard/RealTimeDashboard';
+import { Teams } from './pages/teams/Teams';
+import { Marketplace } from './pages/marketplace/Marketplace';
+import { Referrals } from './pages/referrals/Referrals';
+import { Activity } from './pages/Activity';
 
 import { DocsLayout } from './pages/docs/DocsLayout';
 import { DocsHome } from './pages/docs/DocsHome';
@@ -56,6 +60,10 @@ function App() {
           <Route path="/plans" element={<Plans />} />
           <Route path="/billing/success" element={<StripeSuccess />} />
           <Route path="/dashboard/settings/billing" element={<BillingDashboard />} />
+          <Route path="/teams" element={<Teams />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/referrals" element={<Referrals />} />
+          <Route path="/activity" element={<Activity />} />
           {/* Default redirect for authenticated users */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>

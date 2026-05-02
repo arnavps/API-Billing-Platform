@@ -9,7 +9,18 @@ import { logUsage } from '../middleware/gateway/logUsage';
 const router = Router();
 
 // The heart of MeterFlow: The Proxy Route
-// /proxy/:slug/* -> e.g., /proxy/weather-api/forecast
+// Versioned Route: /proxy/:slug/:version/*
+router.all(
+  '/:slug/:version/*',
+  extractAPIKey,
+  validateAPIKey,
+  checkRateLimit,
+  checkQuota,
+  forwardRequest,
+  logUsage
+);
+
+// Default Version Route: /proxy/:slug/*
 router.all(
   '/:slug/*',
   extractAPIKey,

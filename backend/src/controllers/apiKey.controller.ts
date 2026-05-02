@@ -4,6 +4,7 @@ import { APIKey } from '../models/APIKey';
 import { API } from '../models/API';
 import { WebhookService } from '../services/webhook.service';
 import { NotificationService } from '../services/notification.service';
+import { ActivityLogService } from '../services/activityLog.service';
 
 const generateAPIKey = (type: 'live' | 'test') => {
   const prefix = type === 'live' ? 'mf_live_' : 'mf_test_';
@@ -64,6 +65,8 @@ export const createAPIKey = async (req: Request, res: Response): Promise<void> =
       actionUrl: `/dashboard/apis/${apiId}/keys`,
       actionText: 'Manage Keys',
     });
+
+    await ActivityLogService.log(req, 'Created API Key', 'key', apiKey._id, { name: apiKey.name, apiId });
 
     res.status(201).json({
       data: {
@@ -138,6 +141,8 @@ export const updateAPIKey = async (req: Request, res: Response): Promise<void> =
     const { key, ...keyJson } = apiKey.toJSON();
 
     res.json({ data: keyJson });
+
+    await ActivityLogService.log(req, 'Updated API Key', 'key', keyId, { name: apiKey.name, status });
   } catch (error: any) {
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: error.message } });
   }
@@ -207,6 +212,8 @@ export const rotateAPIKey = async (req: Request, res: Response): Promise<void> =
       actionText: 'Manage Keys',
     });
 
+    await ActivityLogService.log(req, 'Rotated API Key', 'key', newKey._id, { oldKeyId: oldKey._id });
+
     res.json({
       data: {
         newApiKey: {
@@ -255,6 +262,8 @@ export const revokeAPIKey = async (req: Request, res: Response): Promise<void> =
     });
 
     res.json({ data: { message: 'API key revoked successfully' } });
+
+    await ActivityLogService.log(req, 'Revoked API Key', 'key', keyId, { name: apiKey.name });
   } catch (error: any) {
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: error.message } });
   }

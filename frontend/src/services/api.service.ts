@@ -79,4 +79,24 @@ export const apiService = {
     const { data } = await api.get(`/apis/${id}/analytics`, { params });
     return data;
   },
+
+  getAPIVersions: async (id: string) => {
+    const { data } = await api.get(`/apis/${id}/versions`);
+    return data;
+  },
+
+  createAPIVersion: async (id: string, versionData: any) => {
+    const { data } = await api.post(`/apis/${id}/versions`, versionData);
+    return data;
+  },
+
+  updateAPIVersion: async (id: string, versionId: string, versionData: any) => {
+    const { data } = await api.patch(`/apis/${id}/versions/${versionId}`, versionData);
+    return data;
+  },
+
+  setCurrentVersion: async (id: string, versionId: string) => {
+    const { data } = await api.post(`/apis/${id}/versions/${versionId}/set-current`);
+    return data;
+  },
 };

@@ -8,6 +8,10 @@ declare global {
       user?: IUser;
       apiKey?: string;
       api?: IAPI;
+      apiVersion?: {
+        version: string;
+        baseUrl: string;
+      };
       apiKeyDoc?: IAPIKey;
       requestId?: string;
       startTime?: number;

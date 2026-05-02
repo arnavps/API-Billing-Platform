@@ -13,14 +13,21 @@ import analyticsRoutes from './routes/analytics.routes';
 import billingRoutes from './routes/billing.routes';
 import gatewayRoutes from './routes/gateway.routes';
 import docsRoutes from './routes/docs.routes';
+import marketplaceRoutes from './routes/marketplace.routes';
+import domainRoutes from './routes/domain.routes';
 import webhookRoutes from './routes/webhook.routes';
 import notificationRoutes from './routes/notification.routes';
+import teamRoutes from './routes/team.routes';
+import referralRoutes from './routes/referral.routes';
+import activityLogRoutes from './routes/activityLog.routes';
 import BillingController from './controllers/billing.controller';
 import cookieParser from 'cookie-parser';
 import './workers/usage.worker';
 import './workers/aggregation.worker';
 import './workers/billing.worker';
 import './workers/webhook.worker';
+import './workers/health.worker';
+import { scheduleHealthChecks } from './workers/health.worker';
 import { BillingScheduler } from './services/billing.scheduler';
 
 dotenv.config();
@@ -58,6 +65,11 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/docs', docsRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/domains', domainRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/referrals', referralRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api', apiRoutes);
 
 // Error Handling
@@ -72,6 +84,9 @@ SocketService.init(httpServer);
 
 // Initialize Billing Scheduler
 BillingScheduler.init().catch(err => console.error('Failed to init scheduler:', err));
+
+// Initialize Health Checks
+scheduleHealthChecks().catch(err => console.error('Failed to schedule health checks:', err));
 
 httpServer.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);

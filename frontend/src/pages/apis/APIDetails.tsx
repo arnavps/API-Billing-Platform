@@ -12,7 +12,9 @@ import {
   Activity, 
   AlertCircle, 
   Shield,
-  Loader2
+  Loader2,
+  Code2,
+  Layers
 } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { useAPIStore } from '../../store/useAPIStore';
@@ -20,6 +22,8 @@ import { APIKeysTab } from '../../components/apis/APIKeysTab';
 import { AnalyticsTab } from '../../components/apis/AnalyticsTab';
 import { LogsTab } from '../../components/apis/LogsTab';
 import { SettingsTab } from '../../components/apis/SettingsTab';
+import { TransformationsTab } from '../../components/apis/TransformationsTab';
+import { APIVersionsTab } from '../../components/apis/APIVersionsTab';
 import { TestAPIModal } from '../../components/apis/TestAPIModal';
 
 export const APIDetails: React.FC = () => {
@@ -71,6 +75,8 @@ export const APIDetails: React.FC = () => {
     { id: 'keys', label: 'API Keys', icon: Key },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'logs', label: 'Logs', icon: Clock },
+    { id: 'versions', label: 'Versions', icon: Layers },
+    { id: 'transformations', label: 'Transformations', icon: Code2 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -274,6 +280,8 @@ export const APIDetails: React.FC = () => {
         {activeTab === 'keys' && <APIKeysTab apiId={currentAPI._id} />}
         {activeTab === 'analytics' && <AnalyticsTab api={currentAPI} />}
         {activeTab === 'logs' && <LogsTab apiId={currentAPI._id} />}
+        {activeTab === 'versions' && <APIVersionsTab apiId={currentAPI._id} />}
+        {activeTab === 'transformations' && <TransformationsTab api={currentAPI} />}
         {activeTab === 'settings' && <SettingsTab api={currentAPI} />}
       </div>
 

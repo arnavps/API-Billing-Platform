@@ -14,8 +14,11 @@ import {
 import { useAPIStore } from '../../store/useAPIStore';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { APICard } from '../../components/apis/APICard';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { useNavigate } from 'react-router-dom';
 
 export const APIDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { apis, isLoading, fetchAPIs, total } = useAPIStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('');
@@ -107,34 +110,22 @@ export const APIDashboard: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 bg-dark-900/50 border border-dashed border-gray-800 rounded-3xl text-center px-4">
-          <div className="p-4 bg-primary/10 rounded-2xl mb-6">
-            <PlusCircle className="h-12 w-12 text-primary" />
-          </div>
-          <h3 className="text-xl font-bold text-white mb-2">No APIs found</h3>
-          <p className="text-gray-400 max-w-sm mb-8">
-            {searchTerm || category 
-              ? "We couldn't find any APIs matching your current filters." 
-              : "You haven't created any APIs yet. Get started by creating your first API proxy."}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link 
-              to="/apis/new"
-              className="inline-flex items-center justify-center space-x-2 px-6 py-3 bg-primary text-white rounded-xl font-bold transition-all hover:bg-primary-hover shadow-lg shadow-primary/20"
-            >
-              <span>Create First API</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            {(searchTerm || category) && (
-              <button 
-                onClick={() => { setSearchTerm(''); setCategory(''); }}
-                className="px-6 py-3 bg-dark-800 text-white rounded-xl font-bold hover:bg-dark-700 transition-all border border-gray-700"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
-        </div>
+        <EmptyState
+          icon={PlusCircle}
+          title={searchTerm || category ? "No APIs matched" : "Create your first API"}
+          description={searchTerm || category 
+            ? "We couldn't find any APIs matching your current filters. Try adjusting your search." 
+            : "You haven't created any APIs yet. MeterFlow helps you monetize and manage your APIs in minutes."}
+          action={{
+            label: "Create First API",
+            onClick: () => navigate('/apis/new'),
+            icon: Plus
+          }}
+          secondaryAction={(searchTerm || category) ? {
+            label: "Clear Filters",
+            onClick: () => { setSearchTerm(''); setCategory(''); }
+          } : undefined}
+        />
       )}
     </DashboardLayout>
   );

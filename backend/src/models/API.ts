@@ -50,10 +50,13 @@ export interface IAPI extends Document {
       headers: Record<string, string>;
     };
     transformations: {
+      enabled: boolean;
       request: string;
       response: string;
     };
   };
+  versions: mongoose.Types.ObjectId[];
+  currentVersion: string;
   pricing: {
     model: 'free' | 'pay_per_request' | 'subscription' | 'hybrid';
     freeQuota: number;
@@ -71,11 +74,12 @@ export interface IAPI extends Document {
     avgResponseTime: number;
     lastRequestAt?: Date;
   };
-  metadata: {
-    version: string;
-    documentation: string;
-    supportEmail: string;
-    webhookUrl: string;
+  marketplace: {
+    isFeatured: boolean;
+    rating: number;
+    reviewCount: number;
+    verified: boolean;
+    screenshots: string[];
   };
   tags: string[];
   createdAt: Date;
@@ -196,10 +200,13 @@ const apiSchema = new Schema(
         headers: { type: Map, of: String, default: {} },
       },
       transformations: {
+        enabled: { type: Boolean, default: false },
         request: { type: String, default: '' },
         response: { type: String, default: '' },
       },
     },
+    versions: [{ type: Schema.Types.ObjectId, ref: 'APIVersion' }],
+    currentVersion: { type: String, default: '1.0.0' },
     pricing: {
       model: {
         type: String,
@@ -224,10 +231,16 @@ const apiSchema = new Schema(
       lastRequestAt: Date,
     },
     metadata: {
-      version: { type: String, default: '1.0.0' },
       documentation: { type: String, default: '' },
       supportEmail: { type: String, default: '' },
       webhookUrl: { type: String, default: '' },
+    },
+    marketplace: {
+      isFeatured: { type: Boolean, default: false },
+      rating: { type: Number, default: 0 },
+      reviewCount: { type: Number, default: 0 },
+      verified: { type: Boolean, default: false },
+      screenshots: [String],
     },
     tags: [String],
   },

@@ -22,4 +22,10 @@ router.patch('/apis/:apiId/keys/:keyId', protect, apiKeyController.updateAPIKey)
 router.post('/apis/:apiId/keys/:keyId/rotate', protect, apiKeyController.rotateAPIKey);
 router.delete('/apis/:apiId/keys/:keyId', protect, apiKeyController.revokeAPIKey);
 
+// API Version routes
+router.get('/apis/:id/versions', protect, apiController.getAPIVersions);
+router.post('/apis/:id/versions', protect, apiController.createAPIVersion);
+router.patch('/apis/:id/versions/:versionId', protect, apiController.updateAPIVersion);
+router.post('/apis/:id/versions/:versionId/set-current', protect, apiController.setCurrentVersion);
+
 export default router;

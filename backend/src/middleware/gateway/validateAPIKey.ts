@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { APIKey } from '../../models/APIKey';
 import { API } from '../../models/API';
+import { APIVersion } from '../../models/APIVersion';
 import { redisClient } from '../../config/redis';
 
 export const validateAPIKey = async (req: Request, res: Response, next: NextFunction) => {
@@ -102,9 +103,24 @@ export const validateAPIKey = async (req: Request, res: Response, next: NextFunc
       }
     }
 
+    // 7. Handle Versioning
+    const requestedVersion = req.params.version || apiDoc.currentVersion;
+    let versionDoc = await APIVersion.findOne({ apiId: apiDoc._id, version: requestedVersion });
+    
+    // If explicit version not found and it was requested, error out
+    if (!versionDoc && req.params.version) {
+      return res.status(404).json({
+        error: {
+          code: 'VERSION_NOT_FOUND',
+          message: `The requested API version '${requestedVersion}' was not found`
+        }
+      });
+    }
+
     // Attach to request
     req.apiKeyDoc = apiKeyDoc;
     req.api = apiDoc;
+    req.apiVersion = versionDoc || { baseUrl: apiDoc.baseUrl, version: apiDoc.currentVersion };
     req.requestId = crypto.randomUUID();
     req.startTime = Date.now();
 

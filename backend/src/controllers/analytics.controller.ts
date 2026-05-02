@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AnalyticsService } from '../services/analytics.service';
+import { PredictiveService } from '../services/predictive.service';
 
 export class AnalyticsController {
   /**
@@ -92,6 +93,33 @@ export class AnalyticsController {
       res.json({
         success: true,
         data: errors,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * GET /api/analytics/forecast
+   */
+  static async getForecast(req: Request, res: Response) {
+    try {
+      const { apiId, days } = req.query;
+      if (!apiId) {
+        return res.status(400).json({ success: false, message: 'apiId is required' });
+      }
+
+      const forecast = await PredictiveService.forecastUsage(
+        apiId as string,
+        days ? parseInt(days as string) : 7
+      );
+
+      res.json({
+        success: true,
+        data: forecast,
       });
     } catch (error: any) {
       res.status(500).json({

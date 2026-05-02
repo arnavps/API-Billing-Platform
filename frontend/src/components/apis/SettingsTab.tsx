@@ -10,6 +10,9 @@ import {
   Loader2
 } from 'lucide-react';
 import { useAPIStore } from '../../store/useAPIStore';
+import { domainService } from '../../services/domain.service';
+import { useEffect } from 'react';
+import { CheckCircle, ShieldCheck } from 'lucide-react';
 
 interface SettingsTabProps {
   api: any;
@@ -35,6 +38,56 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ api }) => {
       }
     }
   });
+
+  const [domains, setDomains] = useState<any[]>([]);
+  const [newDomain, setNewDomain] = useState('');
+  const [isAddingDomain, setIsAddingDomain] = useState(false);
+
+  useEffect(() => {
+    fetchDomains();
+  }, []);
+
+  const fetchDomains = async () => {
+    try {
+      const data = await domainService.getDomains();
+      setDomains(data.filter((d: any) => d.apiId === api._id));
+    } catch (error) {
+      console.error('Error fetching domains', error);
+    }
+  };
+
+  const handleAddDomain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDomain) return;
+    try {
+      setIsAddingDomain(true);
+      await domainService.addDomain(newDomain);
+      setNewDomain('');
+      fetchDomains();
+    } catch (error) {
+      console.error('Error adding domain', error);
+    } finally {
+      setIsAddingDomain(false);
+    }
+  };
+
+  const handleVerifyDomain = async (id: string) => {
+    try {
+      await domainService.verifyDomain(id);
+      fetchDomains();
+    } catch (error) {
+      console.error('Error verifying domain', error);
+    }
+  };
+
+  const handleDeleteDomain = async (id: string) => {
+    try {
+      await domainService.deleteDomain(id);
+      fetchDomains();
+    } catch (error) {
+      console.error('Error deleting domain', error);
+    }
+  };
 
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -251,6 +304,93 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ api }) => {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Custom Domains */}
+        <section className="bg-dark-900 border border-gray-800 rounded-3xl overflow-hidden shadow-xl">
+          <div className="p-6 border-b border-gray-800 bg-dark-950/50">
+            <h3 className="text-lg font-bold text-white flex items-center">
+              <Globe className="h-5 w-5 mr-2 text-blue-400" />
+              Custom Domains & White-labeling
+            </h3>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="bg-dark-950 border border-gray-800 rounded-2xl p-6">
+              <h4 className="text-sm font-bold text-gray-300 mb-4">Add Custom Domain</h4>
+              <div className="flex gap-3">
+                <input 
+                  type="text" 
+                  value={newDomain}
+                  onChange={(e) => setNewDomain(e.target.value)}
+                  placeholder="api.yourdomain.com"
+                  className="flex-1 bg-dark-900 border border-gray-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-primary/50 transition-all text-sm"
+                />
+                <button 
+                  type="button"
+                  onClick={handleAddDomain}
+                  disabled={isAddingDomain}
+                  className="px-6 py-3 bg-white text-dark-950 rounded-xl font-bold hover:bg-gray-200 transition-all text-sm flex items-center space-x-2"
+                >
+                  {isAddingDomain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  <span>Add Domain</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {domains.length > 0 ? (
+                domains.map((domain) => (
+                  <div key={domain._id} className="p-6 bg-dark-950 border border-gray-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="flex items-center space-x-4">
+                      <div className={`p-3 rounded-xl ${domain.isVerified ? 'bg-green-500/10' : 'bg-yellow-500/10'}`}>
+                        <Globe className={`h-6 w-6 ${domain.isVerified ? 'text-green-500' : 'text-yellow-500'}`} />
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg font-bold text-white">{domain.domain}</span>
+                          {domain.isVerified ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 font-mono">CNAME: proxy.meterflow.com</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3">
+                      {!domain.isVerified && (
+                        <button 
+                          type="button"
+                          onClick={() => handleVerifyDomain(domain._id)}
+                          className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-bold hover:bg-primary hover:text-white transition-all"
+                        >
+                          Verify DNS
+                        </button>
+                      )}
+                      <button 
+                        type="button"
+                        onClick={() => handleDeleteDomain(domain._id)}
+                        className="p-2 text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-12 border-2 border-dashed border-gray-800 rounded-[2rem] flex flex-col items-center justify-center text-center">
+                  <div className="p-4 bg-dark-800 rounded-full mb-4">
+                    <Globe className="h-8 w-8 text-gray-600" />
+                  </div>
+                  <h4 className="font-bold text-gray-400 mb-2">No custom domains configured</h4>
+                  <p className="text-xs text-gray-600 max-w-xs leading-relaxed">
+                    Point your own domain to MeterFlow to provide a white-labeled experience for your customers.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </section>

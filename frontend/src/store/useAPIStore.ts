@@ -17,6 +17,8 @@ interface APIState {
   logsPage: number;
   logsPages: number;
   isUpdating: boolean;
+  versions: any[];
+  isVersionsLoading: boolean;
 
   fetchAPIs: (params?: any) => Promise<void>;
   fetchAPIDetails: (id: string) => Promise<void>;
@@ -24,7 +26,12 @@ interface APIState {
   fetchAPIAnalytics: (id: string, params?: any) => Promise<void>;
   createAPI: (apiData: any) => Promise<any | null>;
   updateAPI: (id: string, apiData: any) => Promise<void>;
+  updateAPIConfiguration: (id: string, configuration: any) => Promise<void>;
   deleteAPI: (id: string) => Promise<void>;
+  fetchAPIVersions: (id: string) => Promise<void>;
+  createAPIVersion: (id: string, versionData: any) => Promise<void>;
+  updateAPIVersion: (id: string, versionId: string, versionData: any) => Promise<void>;
+  setCurrentVersion: (id: string, versionId: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -44,6 +51,8 @@ export const useAPIStore = create<APIState>((set, get) => ({
   logsPage: 1,
   logsPages: 1,
   isUpdating: false,
+  versions: [],
+  isVersionsLoading: false,
 
   fetchAPIs: async (params) => {
     set({ isLoading: true, error: null });
@@ -127,6 +136,20 @@ export const useAPIStore = create<APIState>((set, get) => ({
     }
   },
 
+  updateAPIConfiguration: async (id, configuration) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await apiService.updateAPI(id, { configuration });
+      set((state) => ({
+        apis: state.apis.map((a) => (a._id === id ? response.data : a)),
+        currentAPI: state.currentAPI?._id === id ? response.data : state.currentAPI,
+        isLoading: false,
+      }));
+    } catch (error: any) {
+      set({ error: error.response?.data?.error?.message || 'Failed to update API configuration', isLoading: false });
+    }
+  },
+
   deleteAPI: async (id) => {
     set({ isUpdating: true, error: null });
     try {
@@ -138,6 +161,60 @@ export const useAPIStore = create<APIState>((set, get) => ({
       }));
     } catch (error: any) {
       set({ error: error.response?.data?.error?.message || 'Failed to delete API', isUpdating: false });
+    }
+  },
+
+  fetchAPIVersions: async (id) => {
+    set({ isVersionsLoading: true, error: null });
+    try {
+      const response = await apiService.getAPIVersions(id);
+      set({ versions: response.data, isVersionsLoading: false });
+    } catch (error: any) {
+      set({ error: error.response?.data?.error?.message || 'Failed to fetch API versions', isVersionsLoading: false });
+    }
+  },
+
+  createAPIVersion: async (id, versionData) => {
+    set({ isUpdating: true, error: null });
+    try {
+      const response = await apiService.createAPIVersion(id, versionData);
+      set((state) => ({
+        versions: [response.data, ...state.versions],
+        isUpdating: false,
+      }));
+    } catch (error: any) {
+      set({ error: error.response?.data?.error?.message || 'Failed to create API version', isUpdating: false });
+    }
+  },
+
+  updateAPIVersion: async (id, versionId, versionData) => {
+    set({ isUpdating: true, error: null });
+    try {
+      const response = await apiService.updateAPIVersion(id, versionId, versionData);
+      set((state) => ({
+        versions: state.versions.map((v) => (v._id === versionId ? response.data : v)),
+        isUpdating: false,
+      }));
+    } catch (error: any) {
+      set({ error: error.response?.data?.error?.message || 'Failed to update API version', isUpdating: false });
+    }
+  },
+
+  setCurrentVersion: async (id, versionId) => {
+    set({ isUpdating: true, error: null });
+    try {
+      const response = await apiService.setCurrentVersion(id, versionId);
+      // Update main API and current version status
+      set((state) => ({
+        currentAPI: response.data.api,
+        versions: state.versions.map((v) => ({
+          ...v,
+          isDefault: v._id === versionId,
+        })),
+        isUpdating: false,
+      }));
+    } catch (error: any) {
+      set({ error: error.response?.data?.error?.message || 'Failed to set current version', isUpdating: false });
     }
   },
 

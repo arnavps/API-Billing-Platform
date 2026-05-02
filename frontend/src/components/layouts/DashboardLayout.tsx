@@ -15,8 +15,14 @@ import {
   Menu, 
   Plus,
   CreditCard,
-  Webhook
+  Webhook,
+  Users,
+  Store,
+  Gift
 } from 'lucide-react';
+import { CommandSearch } from '../ui/CommandSearch';
+import { motion } from 'framer-motion';
+import { useGlobalShortcuts } from '../../hooks/useShortcuts';
 
 interface NavItemProps {
   to: string;
@@ -45,6 +51,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  useGlobalShortcuts();
 
   const handleLogout = async () => {
     try {
@@ -59,11 +67,15 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
   const navigation = [
     { label: 'Overview', icon: LayoutDashboard, to: '/dashboard' },
+    { label: 'Activity', icon: Activity, to: '/activity' },
     { label: 'Live Monitor', icon: Activity, to: '/monitor' },
     { label: 'My APIs', icon: Layers, to: '/apis' },
+    { label: 'Marketplace', icon: Store, to: '/marketplace' },
     { label: 'Webhooks', icon: Webhook, to: '/webhooks' },
     { label: 'API Keys', icon: Key, to: '/keys' },
     { label: 'Analytics', icon: BarChart3, to: '/analytics' },
+    { label: 'Team', icon: Users, to: '/teams' },
+    { label: 'Referrals', icon: Gift, to: '/referrals' },
     { label: 'Billing', icon: CreditCard, to: '/dashboard/settings/billing' },
     { label: 'Settings', icon: Settings, to: '/settings' },
   ];
@@ -142,7 +154,14 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             <Menu className="h-6 w-6" />
           </button>
 
+          <div className="flex-1 flex justify-center max-w-md mx-auto hidden md:flex">
+            <CommandSearch />
+          </div>
+
           <div className="flex items-center space-x-4 ml-auto">
+            <div className="md:hidden">
+               <CommandSearch />
+            </div>
             <NotificationDropdown />
             <Link 
               to="/apis/new"
@@ -156,9 +175,15 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar">
-          <div className="max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <motion.div 
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="max-w-6xl mx-auto"
+          >
             {children}
-          </div>
+          </motion.div>
         </main>
       </div>
     </div>
