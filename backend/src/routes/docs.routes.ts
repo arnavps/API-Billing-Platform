@@ -7,6 +7,7 @@ const router = Router();
 router.get('/apis', docsController.getPublicAPIs);
 router.get('/apis/:slug', docsController.getAPIDocs);
 router.get('/guides/:id', docsController.getGuide);
+router.get('/search', docsController.searchDocs);
 
 // Playground proxy (usually requires an API key in headers, but the route itself can be public)
 router.post('/playground/:slug/proxy', docsController.proxyPlaygroundRequest);

@@ -13,6 +13,7 @@ interface DocsState {
   fetchAPIDocs: (slug: string) => Promise<void>;
   fetchGuide: (id: string) => Promise<void>;
   proxyPlaygroundRequest: (slug: string, request: any, apiKey: string) => Promise<any>;
+  searchDocs: (query: string) => Promise<any[]>;
 }
 
 export const useDocsStore = create<DocsState>((set) => ({
@@ -62,6 +63,17 @@ export const useDocsStore = create<DocsState>((set) => ({
       return response.data.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Request failed');
+    }
+  },
+
+  searchDocs: async (query: string) => {
+    if (!query) return [];
+    try {
+      const response = await axios.get(`${API_URL}/docs/search?q=${encodeURIComponent(query)}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Search failed:', error);
+      return [];
     }
   },
 }));

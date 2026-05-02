@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useDocsStore } from '../../store/useDocsStore';
+import { CodeBlock } from '../../components/docs/CodeBlock';
 
 export const GuidePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,14 +45,21 @@ export const GuidePage: React.FC = () => {
           ul: ({ node, ...props }) => <ul className="list-disc list-inside text-slate-400 space-y-2 mb-6" {...props} />,
           ol: ({ node, ...props }) => <ol className="list-decimal list-inside text-slate-400 space-y-2 mb-6" {...props} />,
           li: ({ node, ...props }) => <li className="text-slate-400" {...props} />,
-          code: ({ node, inline, ...props }: any) => 
-            inline ? (
-              <code className="bg-white/5 px-1.5 py-0.5 rounded text-primary-400 font-mono text-sm" {...props} />
+          code: ({ node, inline, className, children, ...props }: any) => {
+            const match = /language-(\w+)/.exec(className || '');
+            const language = match ? match[1] : 'text';
+            
+            return inline ? (
+              <code className="bg-white/5 px-1.5 py-0.5 rounded text-primary-400 font-mono text-sm" {...props}>
+                {children}
+              </code>
             ) : (
-              <pre className="bg-surface-800 p-4 rounded-xl border border-white/5 overflow-x-auto text-sm font-mono leading-relaxed my-6">
-                <code className="text-slate-300" {...props} />
-              </pre>
-            ),
+              <CodeBlock 
+                code={String(children).replace(/\n$/, '')} 
+                language={language} 
+              />
+            );
+          },
           blockquote: ({ node, ...props }) => (
             <blockquote className="border-l-4 border-primary-500 bg-primary-500/5 px-6 py-4 rounded-r-xl italic text-slate-300 mb-6" {...props} />
           ),

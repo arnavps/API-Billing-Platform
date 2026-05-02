@@ -18,19 +18,20 @@ import { useDocsStore } from '../../store/useDocsStore';
 
 const sidebarLinks = [
   { 
-    title: 'Welcome', 
+    title: 'Getting Started', 
     items: [
-      { name: 'Getting Started', path: '/docs', icon: BookOpenIcon },
-      { name: 'Introduction', path: '/docs/intro', icon: QuestionMarkCircleIcon },
+      { name: 'Introduction', path: '/docs', icon: BookOpenIcon },
+      { name: 'Quick Start', path: '/docs/getting-started', icon: BoltIcon },
+      { name: 'Authentication', path: '/docs/authentication', icon: KeyIcon },
     ]
   },
   { 
-    title: 'Guides', 
+    title: 'Resources', 
     items: [
-      { name: 'Authentication', path: '/docs/auth', icon: KeyIcon },
       { name: 'Rate Limiting', path: '/docs/rate-limiting', icon: ArrowPathIcon },
       { name: 'Error Codes', path: '/docs/errors', icon: ExclamationTriangleIcon },
       { name: 'Webhooks', path: '/docs/webhooks', icon: RectangleGroupIcon },
+      { name: 'SDKs & Libraries', path: '/docs/sdks', icon: LifebuoyIcon },
     ]
   },
   { 
@@ -38,19 +39,58 @@ const sidebarLinks = [
     items: [
       { name: 'API Reference', path: '/docs/reference', icon: CodeBracketIcon },
       { name: 'API Playground', path: '/docs/playground', icon: CommandLineIcon },
-      { name: 'SDKs', path: '/docs/sdks', icon: LifebuoyIcon },
     ]
   }
 ];
 
 export const DocsLayout: React.FC = () => {
   const location = useLocation();
-  const { fetchPublicAPIs, publicAPIs } = useDocsStore();
+  const { fetchPublicAPIs, publicAPIs, searchDocs } = useDocsStore();
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     fetchPublicAPIs();
   }, [fetchPublicAPIs]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+      if (e.key === '/') {
+        if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          setSearchOpen(true);
+        }
+      }
+      if (e.key === 'Escape') {
+        setSearchOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        return;
+      }
+      setIsSearching(true);
+      const results = await searchDocs(searchQuery);
+      setSearchResults(results);
+      setIsSearching(false);
+    };
+
+    const timeout = setTimeout(performSearch, 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, searchDocs]);
 
   return (
     <div className="min-h-screen bg-surface-900 text-slate-200 flex flex-col">
@@ -70,14 +110,14 @@ export const DocsLayout: React.FC = () => {
           </Link>
 
           <div className="hidden md:flex relative group">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary-400 transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search documentation..."
-              className="pl-10 pr-4 py-1.5 bg-surface-800/50 border border-white/5 rounded-full text-sm focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 w-64 transition-all"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <button 
+              onClick={() => setSearchOpen(true)}
+              className="flex items-center gap-2 pl-4 pr-3 py-1.5 bg-surface-800/50 border border-white/5 rounded-full text-sm text-slate-500 hover:border-primary-500/30 transition-all w-64 text-left group"
+            >
+              <MagnifyingGlassIcon className="w-4 h-4 group-hover:text-primary-400 transition-colors" />
+              <span className="flex-1">Search documentation...</span>
+              <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-slate-600 font-mono">⌘K</kbd>
+            </button>
           </div>
         </div>
 
@@ -163,5 +203,78 @@ export const DocsLayout: React.FC = () => {
         </main>
       </div>
     </div>
+
+    {/* Search Modal */}
+    <AnimatePresence>
+      {searchOpen && (
+        <>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSearchOpen(false)}
+            className="fixed inset-0 bg-surface-950/80 backdrop-blur-sm z-[100]"
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+            className="fixed top-[10%] left-1/2 -translate-x-1/2 w-full max-w-xl bg-surface-900 border border-white/10 rounded-2xl shadow-2xl z-[101] overflow-hidden"
+          >
+            <div className="p-4 border-b border-white/5 flex items-center gap-3">
+              <MagnifyingGlassIcon className="w-5 h-5 text-slate-400" />
+              <input 
+                autoFocus
+                type="text"
+                placeholder="Search documentation..."
+                className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-slate-500"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <kbd className="hidden sm:block px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-slate-500 font-mono">ESC</kbd>
+            </div>
+            
+            <div className="max-h-[60vh] overflow-y-auto p-2 custom-scrollbar">
+              {isSearching ? (
+                <div className="py-12 text-center">
+                  <ArrowPathIcon className="w-8 h-8 text-primary-500 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-slate-400">Searching...</p>
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div className="space-y-1">
+                  {searchResults.map((result, i) => (
+                    <Link
+                      key={i}
+                      to={result.path}
+                      onClick={() => setSearchOpen(false)}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 group transition-all border border-transparent hover:border-white/5"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${result.type === 'guide' ? 'bg-primary-500/10 text-primary-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                          {result.type === 'guide' ? <BookOpenIcon className="w-4 h-4" /> : <CodeBracketIcon className="w-4 h-4" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white group-hover:text-primary-400 transition-colors">{result.title}</p>
+                          <p className="text-xs text-slate-500">{result.category}</p>
+                        </div>
+                      </div>
+                      <ChevronRightIcon className="w-4 h-4 text-slate-600 group-hover:text-primary-400 group-hover:translate-x-1 transition-all" />
+                    </Link>
+                  ))}
+                </div>
+              ) : searchQuery ? (
+                <div className="py-12 text-center">
+                  <p className="text-sm text-slate-400 italic">No results found for "{searchQuery}"</p>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-slate-500 text-sm">
+                  Start typing to search guides and APIs...
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 };

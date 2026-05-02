@@ -9,6 +9,7 @@ import {
   TagIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline';
+import { CodeBlock } from '../../components/docs/CodeBlock';
 
 const MethodBadge: React.FC<{ method: string }> = ({ method }) => {
   const colors: Record<string, string> = {
@@ -23,32 +24,6 @@ const MethodBadge: React.FC<{ method: string }> = ({ method }) => {
     <span className={`px-2 py-0.5 rounded text-xs font-bold border ${colors[method] || 'bg-slate-500/10 text-slate-400 border-slate-500/20'}`}>
       {method}
     </span>
-  );
-};
-
-const CodeBlock: React.FC<{ code: string; language: string }> = ({ code, language }) => {
-  const [copied, setCopied] = useState(false);
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="relative group mt-4">
-      <div className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button 
-          onClick={copyToClipboard}
-          className="p-1.5 bg-white/10 hover:bg-white/20 rounded-md border border-white/10 transition-all"
-        >
-          {copied ? <CheckIcon className="w-4 h-4 text-emerald-400" /> : <ClipboardIcon className="w-4 h-4 text-slate-300" />}
-        </button>
-      </div>
-      <pre className="bg-surface-800 p-4 rounded-xl border border-white/5 overflow-x-auto text-sm font-mono leading-relaxed">
-        <code className={`language-${language}`}>{code}</code>
-      </pre>
-    </div>
   );
 };
 

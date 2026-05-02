@@ -36,7 +36,7 @@ export const DocsHome: React.FC = () => {
           </div>
         </Link>
 
-        <Link to="/docs/auth" className="glass-card p-6 hover:border-accent-500/30 transition-all group">
+        <Link to="/docs/authentication" className="glass-card p-6 hover:border-accent-500/30 transition-all group">
           <div className="w-12 h-12 bg-accent-500/10 rounded-xl flex items-center justify-center mb-4 border border-accent-500/20 group-hover:scale-110 transition-transform">
             <KeyIcon className="w-6 h-6 text-accent-400" />
           </div>
