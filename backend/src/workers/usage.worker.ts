@@ -1,8 +1,12 @@
 import { Worker, Job } from 'bullmq';
 import { APILog } from '../models/APILog';
 import { API } from '../models/API';
+import { User } from '../models/User';
+import Plan from '../models/Plan';
 import { redisClient } from '../config/redis';
 import { SocketService } from '../services/socket.service';
+import { NotificationService } from '../services/notification.service';
+import { WebhookService } from '../services/webhook.service';
 
 export const usageWorker = new Worker(
   'usage-logs',
@@ -58,6 +62,9 @@ export const usageWorker = new Worker(
           timestamp: new Date(),
         });
 
+        // 5. Check Quota Thresholds and Notify
+        await checkQuotaThresholds(data.userId, data.apiId);
+
       } catch (error) {
         console.error('Error in usage worker:', error);
         throw error;
@@ -71,6 +78,77 @@ export const usageWorker = new Worker(
     },
   }
 );
+
+async function checkQuotaThresholds(userId: string, apiId: string) {
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const ownerUsageKey = `mf:usage:owner:${userId}:${currentMonth}`;
+  
+  const currentUsage = await redisClient.get(ownerUsageKey);
+  const usage = currentUsage ? parseInt(currentUsage) : 0;
+
+  // Cache/Fetch plan quota
+  const user = await User.findById(userId);
+  if (!user) return;
+
+  const subscription = user.subscription;
+  // This is a bit simplified, usually we'd have the plan object or ID
+  // For now, let's assume standard quotas or fetch the plan
+  const plan = await Plan.findOne({ name: subscription.plan });
+  if (!plan) return;
+
+  const quota = plan.requestsQuota;
+  if (quota <= 0) return;
+
+  const percentage = (usage / quota) * 100;
+
+  // 80% Threshold
+  if (percentage >= 80 && percentage < 100) {
+    const lockKey = `mf:notif:80:${userId}:${currentMonth}`;
+    const alreadyNotified = await redisClient.get(lockKey);
+
+    if (!alreadyNotified) {
+      await NotificationService.notify(userId, {
+        title: 'Quota Warning',
+        message: `Your account has reached 80% of your monthly request quota (${usage.toLocaleString()} / ${quota.toLocaleString()}).`,
+        type: 'warning',
+        link: '/dashboard/billing'
+      });
+
+      await WebhookService.trigger(userId, 'quota.warning', {
+        usage,
+        quota,
+        percentage,
+        month: currentMonth
+      });
+
+      await redisClient.set(lockKey, 'true', 'EX', 60 * 60 * 24 * 31);
+    }
+  }
+
+  // 100% Threshold
+  if (percentage >= 100) {
+    const lockKey = `mf:notif:100:${userId}:${currentMonth}`;
+    const alreadyNotified = await redisClient.get(lockKey);
+
+    if (!alreadyNotified) {
+      await NotificationService.notify(userId, {
+        title: 'Quota Exceeded',
+        message: `Your account has exceeded your monthly request quota. APIs will be rate-limited until the next cycle or upgrade.`,
+        type: 'error',
+        link: '/dashboard/billing'
+      });
+
+      await WebhookService.trigger(userId, 'quota.exceeded', {
+        usage,
+        quota,
+        percentage,
+        month: currentMonth
+      });
+
+      await redisClient.set(lockKey, 'true', 'EX', 60 * 60 * 24 * 31);
+    }
+  }
+}
 
 usageWorker.on('completed', (job) => {
   // console.log(`Job ${job.id} completed`);

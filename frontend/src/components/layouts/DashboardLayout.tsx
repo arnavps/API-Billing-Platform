@@ -138,11 +138,11 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             <Menu className="h-6 w-6" />
           </button>
 
+import { NotificationCenter } from '../dashboard/NotificationCenter';
+
+// ... inside header ...
           <div className="flex items-center space-x-4 ml-auto">
-            <button className="relative p-2 text-gray-400 hover:text-white transition-colors">
-              <Activity className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-green-500 border-2 border-dark-900" />
-            </button>
+            <NotificationCenter />
             <Link 
               to="/apis/new"
               className="hidden sm:inline-flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-all shadow-lg shadow-primary/20 active:scale-95"

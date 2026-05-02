@@ -14,3 +14,10 @@ export const aggregationQueue = new Queue('analytics-aggregation', {
     port: parseInt(process.env.REDIS_PORT || '6379'),
   }
 });
+
+export const billingQueue = new Queue('billing-tasks', {
+  connection: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+  }
+});

@@ -1,5 +1,29 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export interface IEndpoint {
+  name: string;
+  path: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  description: string;
+  parameters: Array<{
+    name: string;
+    type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+    in: 'query' | 'header' | 'path' | 'body';
+    required: boolean;
+    description: string;
+    example?: any;
+  }>;
+  requestBody?: {
+    type: string;
+    example: string;
+  };
+  responses: Array<{
+    status: number;
+    description: string;
+    example: string;
+  }>;
+}
+
 export interface IAPI extends Document {
   userId: mongoose.Types.ObjectId;
   name: string;
@@ -10,6 +34,7 @@ export interface IAPI extends Document {
   icon: string;
   status: 'active' | 'paused' | 'maintenance';
   visibility: 'public' | 'private';
+  endpoints: IEndpoint[];
   configuration: {
     timeout: number;
     retries: number;
@@ -107,6 +132,45 @@ const apiSchema = new Schema(
       enum: ['public', 'private'],
       default: 'private',
     },
+    endpoints: [
+      {
+        name: { type: String, required: true },
+        path: { type: String, required: true },
+        method: {
+          type: String,
+          enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+          required: true,
+        },
+        description: { type: String, required: true },
+        parameters: [
+          {
+            name: String,
+            type: {
+              type: String,
+              enum: ['string', 'number', 'boolean', 'object', 'array'],
+            },
+            in: {
+              type: String,
+              enum: ['query', 'header', 'path', 'body'],
+            },
+            required: Boolean,
+            description: String,
+            example: Schema.Types.Mixed,
+          },
+        ],
+        requestBody: {
+          type: { type: String },
+          example: { type: String },
+        },
+        responses: [
+          {
+            status: Number,
+            description: String,
+            example: String,
+          },
+        ],
+      },
+    ],
     configuration: {
       timeout: { type: Number, default: 30000 },
       retries: { type: Number, default: 3 },

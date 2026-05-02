@@ -12,10 +12,16 @@ import apiRoutes from './routes/api.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import billingRoutes from './routes/billing.routes';
 import gatewayRoutes from './routes/gateway.routes';
+import docsRoutes from './routes/docs.routes';
+import webhookRoutes from './routes/webhook.routes';
+import notificationRoutes from './routes/notification.routes';
 import BillingController from './controllers/billing.controller';
 import cookieParser from 'cookie-parser';
 import './workers/usage.worker';
 import './workers/aggregation.worker';
+import './workers/billing.worker';
+import './workers/webhook.worker';
+import { BillingScheduler } from './services/billing.scheduler';
 
 dotenv.config();
 
@@ -48,6 +54,9 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/docs', docsRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api', apiRoutes);
 
 // Error Handling
@@ -59,6 +68,9 @@ const httpServer = createServer(app);
 
 // Initialize Socket.io
 SocketService.init(httpServer);
+
+// Initialize Billing Scheduler
+BillingScheduler.init().catch(err => console.error('Failed to init scheduler:', err));
 
 httpServer.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);

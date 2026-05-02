@@ -78,6 +78,51 @@ class StripeService {
   }
 
   /**
+   * Attach a payment method to a customer
+   */
+  async attachPaymentMethod(customerId: string, paymentMethodId: string) {
+    const paymentMethod = await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customerId,
+    });
+
+    // Optionally set as default for the customer
+    await stripe.customers.update(customerId, {
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    });
+
+    return paymentMethod;
+  }
+
+  /**
+   * List payment methods for a customer
+   */
+  async listPaymentMethods(customerId: string) {
+    const paymentMethods = await stripe.paymentMethods.list({
+      customer: customerId,
+      type: 'card',
+    });
+    return paymentMethods.data;
+  }
+
+  /**
+   * Create a payment intent for a specific amount
+   */
+  async createPaymentIntent(customerId: string, amount: number, metadata: any = {}) {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'usd',
+      customer: customerId,
+      metadata,
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+    return paymentIntent;
+  }
+
+  /**
    * Handle Stripe webhooks
    */
   async handleWebhook(event: any) {
@@ -100,6 +145,16 @@ class StripeService {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as any;
         await this.handleSubscriptionDeleted(subscription);
+        break;
+      }
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object as any;
+        await this.handlePaymentIntentSucceeded(paymentIntent);
+        break;
+      }
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object as any;
+        await this.handlePaymentIntentFailed(paymentIntent);
         break;
       }
       default:
@@ -193,6 +248,28 @@ class StripeService {
 
     await User.findByIdAndUpdate(subscription.userId, {
       'subscription.status': 'cancelled',
+    });
+  }
+
+  private async handlePaymentIntentSucceeded(paymentIntent: any) {
+    const invoiceId = paymentIntent.metadata?.invoiceId;
+    if (!invoiceId) return;
+
+    await Invoice.findByIdAndUpdate(invoiceId, {
+      status: 'paid',
+      paymentIntent: paymentIntent.id,
+      paidAt: new Date(),
+      amountPaid: paymentIntent.amount,
+      amountDue: 0,
+    });
+  }
+
+  private async handlePaymentIntentFailed(paymentIntent: any) {
+    const invoiceId = paymentIntent.metadata?.invoiceId;
+    if (!invoiceId) return;
+
+    await Invoice.findByIdAndUpdate(invoiceId, {
+      status: 'failed',
     });
   }
 }

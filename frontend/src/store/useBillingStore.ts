@@ -32,17 +32,32 @@ interface Invoice {
   billingReason: string;
 }
 
+interface BillingCycle {
+  month: string;
+  totalCost: number;
+  status: string;
+  apis: Array<{
+    apiId: string;
+    name: string;
+    totalRequests: number;
+    cost: number;
+  }>;
+}
+
 interface BillingState {
   plans: Plan[];
   subscription: Subscription | null;
   invoices: Invoice[];
+  currentCycle: BillingCycle | null;
   loading: boolean;
   error: string | null;
   fetchPlans: () => Promise<void>;
   fetchSubscription: () => Promise<void>;
   fetchInvoices: () => Promise<void>;
+  fetchCurrentCycle: () => Promise<void>;
   createCheckout: (planId: string) => Promise<string>;
   createPortal: () => Promise<string>;
+  payInvoice: (invoiceId: string) => Promise<{ clientSecret: string }>;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -51,6 +66,7 @@ export const useBillingStore = create<BillingState>((set) => ({
   plans: [],
   subscription: null,
   invoices: [],
+  currentCycle: null,
   loading: false,
   error: null,
 
@@ -107,6 +123,28 @@ export const useBillingStore = create<BillingState>((set) => ({
       return response.data.url;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to create portal session');
+    }
+  },
+  fetchCurrentCycle: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/billing/current-cycle`, { withCredentials: true });
+      set({ currentCycle: response.data, loading: false });
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to fetch current cycle', loading: false });
+    }
+  },
+
+  payInvoice: async (invoiceId: string) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/billing/invoices/${invoiceId}/pay`,
+        {},
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to initiate payment');
     }
   },
 }));

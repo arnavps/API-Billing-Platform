@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useBillingStore } from '../store/useBillingStore';
 import { 
   CreditCard, 
@@ -8,24 +8,44 @@ import {
   AlertCircle,
   FileText,
   Download,
-  Loader2
+  Loader2,
+  Eye,
+  CreditCard as PayIcon
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { PaymentModal } from '../components/billing/PaymentModal';
+import { InvoiceDetails } from '../components/billing/InvoiceDetails';
 
 const BillingDashboard: React.FC = () => {
   const { 
-    subscription, 
+    subscription,
     invoices, 
+    currentCycle,
     loading, 
     fetchSubscription, 
     fetchInvoices,
-    createPortal 
+    fetchCurrentCycle,
+    createPortal,
+    payInvoice
   } = useBillingStore();
+
+  const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; clientSecret: string; invoiceId: string; amount: number }>({
+    isOpen: false,
+    clientSecret: '',
+    invoiceId: '',
+    amount: 0,
+  });
+
+  const [invoiceDetailsModal, setInvoiceDetailsModal] = useState<{ isOpen: boolean; invoice: any | null }>({
+    isOpen: false,
+    invoice: null,
+  });
 
   useEffect(() => {
     fetchSubscription();
     fetchInvoices();
-  }, [fetchSubscription, fetchInvoices]);
+    fetchCurrentCycle();
+  }, [fetchSubscription, fetchInvoices, fetchCurrentCycle]);
 
   const handleManagePortal = async () => {
     try {
@@ -35,6 +55,34 @@ const BillingDashboard: React.FC = () => {
       console.error('Failed to open portal:', error);
       alert('Failed to open billing portal.');
     }
+  };
+
+  const handlePayInvoice = async (invoice: any) => {
+    try {
+      const { clientSecret } = await payInvoice(invoice._id);
+      setPaymentModal({
+        isOpen: true,
+        clientSecret,
+        invoiceId: invoice._id,
+        amount: invoice.total || (invoice.amount * 100), // Ensure it's in cents
+      });
+    } catch (error) {
+      console.error('Payment initiation failed:', error);
+      alert('Could not initiate payment. Please try again.');
+    }
+  };
+
+  const handleViewInvoice = (invoice: any) => {
+    setInvoiceDetailsModal({
+      isOpen: true,
+      invoice,
+    });
+  };
+
+  const handlePaymentSuccess = () => {
+    setPaymentModal(prev => ({ ...prev, isOpen: false }));
+    fetchInvoices(); // Refresh list
+    fetchSubscription(); // Status might have changed
   };
 
   if (loading && !subscription) {
@@ -129,7 +177,7 @@ const BillingDashboard: React.FC = () => {
               </div>
               <button 
                 onClick={handleManagePortal}
-                className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors"
               >
                 Update
               </button>
@@ -139,29 +187,32 @@ const BillingDashboard: React.FC = () => {
 
         {/* Right Sidebar - Quick Info */}
         <div className="space-y-6">
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6"
-          >
-            <h3 className="text-lg font-semibold text-white mb-4">Quota Usage</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-400">Monthly Requests</span>
-                  <span className="text-white font-medium">
-                    0 / {subscription?.planId?.requestsQuota.toLocaleString() || '1,000'}
-                  </span>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-2">
-                  <div className="bg-indigo-500 h-2 rounded-full w-[2%]"></div>
+          {/* Current Cycle Breakdown */}
+          {currentCycle && currentCycle.apis && currentCycle.apis.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6"
+            >
+              <h3 className="text-lg font-semibold text-white mb-4">Current Cycle Usage</h3>
+              <div className="space-y-4">
+                {currentCycle.apis.map((api) => (
+                  <div key={api.apiId} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-white">{api.name}</p>
+                      <p className="text-xs text-slate-500">{api.totalRequests.toLocaleString()} requests</p>
+                    </div>
+                    <p className="text-sm font-semibold text-white">${api.cost.toFixed(2)}</p>
+                  </div>
+                ))}
+                <div className="pt-4 border-t border-slate-700/50 flex justify-between">
+                  <span className="text-sm text-slate-400">Total Projection</span>
+                  <span className="text-sm font-bold text-indigo-400">${currentCycle.totalCost.toFixed(2)}</span>
                 </div>
               </div>
-              <p className="text-xs text-slate-500">
-                Your quota resets on {subscription ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'the 1st of next month'}.
-              </p>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -172,54 +223,77 @@ const BillingDashboard: React.FC = () => {
         transition={{ delay: 0.2 }}
         className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden"
       >
-        <div className="p-6 border-b border-slate-700 flex items-center gap-3">
-          <History className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-lg font-semibold text-white">Billing History</h3>
+        <div className="p-6 border-b border-slate-700 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <History className="w-5 h-5 text-indigo-400" />
+            <h3 className="text-lg font-semibold text-white">Billing History</h3>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider bg-slate-900/30">
                 <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Description</th>
+                <th className="px-6 py-4">Invoice #</th>
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Invoice</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
               {invoices.length > 0 ? (
-                invoices.map((invoice) => (
+                invoices.map((invoice: any) => (
                   <tr key={invoice._id} className="text-sm text-slate-300 hover:bg-slate-700/20 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {new Date(invoice.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      {invoice.billingReason || 'Subscription renewal'}
+                    <td className="px-6 py-4 whitespace-nowrap text-xs">
+                      {new Date(invoice.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 font-medium text-white">
-                      ${invoice.amount.toFixed(2)} {invoice.currency.toUpperCase()}
+                      {invoice.invoiceNumber}
+                    </td>
+                    <td className="px-6 py-4 tabular-nums">
+                      ${(invoice.total / 100).toFixed(2)} {invoice.currency?.toUpperCase() || 'USD'}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
                         invoice.status === 'paid' 
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                          : invoice.status === 'failed'
+                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                           : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                       }`}>
                         {invoice.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <a 
-                        href={invoice.pdfUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1.5"
-                      >
-                        <FileText className="w-4 h-4" />
-                        PDF
-                        <Download className="w-3 h-3" />
-                      </a>
+                      <div className="flex justify-end gap-2">
+                        {invoice.status !== 'paid' && (
+                          <button
+                            onClick={() => handlePayInvoice(invoice)}
+                            className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+                            title="Pay Now"
+                          >
+                            <PayIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleViewInvoice(invoice)}
+                          className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {invoice.pdfUrl && (
+                          <a 
+                            href={invoice.pdfUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
+                            title="Download PDF"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -234,6 +308,21 @@ const BillingDashboard: React.FC = () => {
           </table>
         </div>
       </motion.div>
+
+      {/* Modals */}
+      <PaymentModal
+        isOpen={paymentModal.isOpen}
+        onClose={() => setPaymentModal(prev => ({ ...prev, isOpen: false }))}
+        clientSecret={paymentModal.clientSecret}
+        amount={paymentModal.amount}
+        onSuccess={handlePaymentSuccess}
+      />
+
+      <InvoiceDetails
+        isOpen={invoiceDetailsModal.isOpen}
+        onClose={() => setInvoiceDetailsModal(prev => ({ ...prev, isOpen: false }))}
+        invoice={invoiceDetailsModal.invoice}
+      />
     </div>
   );
 };

@@ -15,6 +15,12 @@ import Plans from './pages/Plans';
 import BillingDashboard from './pages/BillingDashboard';
 import StripeSuccess from './pages/StripeSuccess';
 
+import { DocsLayout } from './pages/docs/DocsLayout';
+import { DocsHome } from './pages/docs/DocsHome';
+import { APIDocs } from './pages/docs/APIDocs';
+import { APIPlayground } from './pages/docs/APIPlayground';
+import { GuidePage } from './pages/docs/GuidePage';
+
 function App() {
   return (
     <Router>
@@ -26,6 +32,14 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        </Route>
+
+        {/* Documentation Portal (Public) */}
+        <Route path="/docs" element={<DocsLayout />}>
+          <Route index element={<DocsHome />} />
+          <Route path="apis/:slug" element={<APIDocs />} />
+          <Route path="playground" element={<APIPlayground />} />
+          <Route path=":id" element={<GuidePage />} />
         </Route>
 
         {/* Private Routes */}
