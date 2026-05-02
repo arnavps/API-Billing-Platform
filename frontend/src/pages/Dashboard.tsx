@@ -4,6 +4,7 @@ import { DashboardLayout } from '../components/layouts/DashboardLayout';
 import { StatCard } from '../components/dashboard/StatCard';
 import { HealthGrid } from '../components/dashboard/HealthGrid';
 import { LatencyHeatmap } from '../components/dashboard/LatencyHeatmap';
+import { GeographicDistribution } from '../components/dashboard/GeographicDistribution';
 import { LiveRequestFeed } from '../components/dashboard/LiveRequestFeed';
 import { analyticsService, AnalyticsOverview } from '../services/analytics.service';
 import { 
@@ -133,6 +134,9 @@ export const Dashboard: React.FC = () => {
             </div>
             <div className="h-[350px]">
               <LatencyHeatmap loading={loading} />
+            </div>
+            <div className="h-[400px]">
+              <GeographicDistribution />
             </div>
           </div>
 
