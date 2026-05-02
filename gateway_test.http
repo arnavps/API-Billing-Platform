@@ -1,0 +1,34 @@
+### API Gateway Test Requests
+
+@baseUrl = http://localhost:5000
+@apiSlug = httpbin
+@apiKey = YOUR_API_KEY_HERE
+
+### 1. Test GET Request
+GET {{baseUrl}}/proxy/{{apiSlug}}/get
+X-MF-API-Key: {{apiKey}}
+
+### 2. Test POST Request with JSON
+POST {{baseUrl}}/proxy/{{apiSlug}}/post
+X-MF-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+    "message": "Hello from MeterFlow Gateway",
+    "test": true
+}
+
+### 3. Test Rate Limiting (Run this multiple times)
+GET {{baseUrl}}/proxy/{{apiSlug}}/get
+X-MF-API-Key: {{apiKey}}
+
+### 4. Test Invalid Slug
+GET {{baseUrl}}/proxy/invalid-slug/get
+X-MF-API-Key: {{apiKey}}
+
+### 5. Test Missing API Key
+GET {{baseUrl}}/proxy/{{apiSlug}}/get
+
+### 6. Test Invalid API Key
+GET {{baseUrl}}/proxy/{{apiSlug}}/get
+X-MF-API-Key: invalid_key

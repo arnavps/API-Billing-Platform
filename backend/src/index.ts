@@ -7,7 +7,9 @@ import { errorHandler, notFound } from './middleware/error';
 import { apiLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth.routes';
 import apiRoutes from './routes/api.routes';
+import gatewayRoutes from './routes/gateway.routes';
 import cookieParser from 'cookie-parser';
+import './workers/usage.worker';
 
 dotenv.config();
 
@@ -27,6 +29,8 @@ app.use(cookieParser());
 app.use('/api', apiLimiter);
 
 // Routes
+app.use('/proxy', gatewayRoutes);
+
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', message: 'MeterFlow API is running' });
 });
