@@ -14,7 +14,8 @@ import {
   Menu, 
   X,
   ChevronRight,
-  Plus
+  Plus,
+  CreditCard
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -61,6 +62,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     { label: 'My APIs', icon: Layers, to: '/apis' },
     { label: 'API Keys', icon: Key, to: '/keys' },
     { label: 'Analytics', icon: BarChart3, to: '/analytics' },
+    { label: 'Billing', icon: CreditCard, to: '/dashboard/settings/billing' },
     { label: 'Settings', icon: Settings, to: '/settings' },
   ];
 

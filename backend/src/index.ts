@@ -10,7 +10,9 @@ import { apiLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth.routes';
 import apiRoutes from './routes/api.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import billingRoutes from './routes/billing.routes';
 import gatewayRoutes from './routes/gateway.routes';
+import BillingController from './controllers/billing.controller';
 import cookieParser from 'cookie-parser';
 import './workers/usage.worker';
 import './workers/aggregation.worker';
@@ -28,6 +30,10 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
 }));
+
+// Stripe webhook needs raw body for signature verification
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), BillingController.handleWebhook);
+
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api', apiLimiter);
@@ -41,6 +47,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/billing', billingRoutes);
 app.use('/api', apiRoutes);
 
 // Error Handling

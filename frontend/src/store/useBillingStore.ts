@@ -1,0 +1,112 @@
+import { create } from 'zustand';
+import axios from 'axios';
+
+interface Plan {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  billingCycle: string;
+  requestsQuota: number;
+  features: string[];
+  stripePriceId: string;
+}
+
+interface Subscription {
+  _id: string;
+  planId: Plan;
+  status: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+}
+
+interface Invoice {
+  _id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  pdfUrl: string;
+  date: string;
+  billingReason: string;
+}
+
+interface BillingState {
+  plans: Plan[];
+  subscription: Subscription | null;
+  invoices: Invoice[];
+  loading: boolean;
+  error: string | null;
+  fetchPlans: () => Promise<void>;
+  fetchSubscription: () => Promise<void>;
+  fetchInvoices: () => Promise<void>;
+  createCheckout: (planId: string) => Promise<string>;
+  createPortal: () => Promise<string>;
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+export const useBillingStore = create<BillingState>((set) => ({
+  plans: [],
+  subscription: null,
+  invoices: [],
+  loading: false,
+  error: null,
+
+  fetchPlans: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/billing/plans`, { withCredentials: true });
+      set({ plans: response.data, loading: false });
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to fetch plans', loading: false });
+    }
+  },
+
+  fetchSubscription: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/billing/subscription`, { withCredentials: true });
+      set({ subscription: response.data, loading: false });
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to fetch subscription', loading: false });
+    }
+  },
+
+  fetchInvoices: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/billing/invoices`, { withCredentials: true });
+      set({ invoices: response.data, loading: false });
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to fetch invoices', loading: false });
+    }
+  },
+
+  createCheckout: async (planId: string) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/billing/checkout`,
+        { planId },
+        { withCredentials: true }
+      );
+      return response.data.url;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to create checkout session');
+    }
+  },
+
+  createPortal: async () => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/billing/portal`,
+        {},
+        { withCredentials: true }
+      );
+      return response.data.url;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to create portal session');
+    }
+  },
+}));

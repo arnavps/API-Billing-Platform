@@ -9,7 +9,8 @@ import {
   Clock, 
   Shield, 
   Zap,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
 import { useAPIStore } from '../../store/useAPIStore';
 
@@ -227,7 +228,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ api }) => {
             disabled={isUpdating}
             className="px-8 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50 flex items-center space-x-2"
           >
-            {isUpdating ? <Zap className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+            {isUpdating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
             <span>Save All Changes</span>
           </button>
         </div>

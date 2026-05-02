@@ -10,7 +10,6 @@ import {
   XCircle,
   Clock,
   Code,
-  Code,
   Loader2,
   RefreshCw
 } from 'lucide-react';

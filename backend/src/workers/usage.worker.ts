@@ -27,13 +27,23 @@ export const usageWorker = new Worker(
           },
         });
 
-        // 3. Update Redis Quota
+        // 3. Update Redis Quotas
         const currentMonth = new Date().toISOString().slice(0, 7);
-        const quotaKey = `mf:quota:${data.userId}:${data.apiId}:${currentMonth}`;
         
-        await redisClient.incr(quotaKey);
-        // Set expiry for 2 months to be safe
-        await redisClient.expire(quotaKey, 60 * 60 * 24 * 60);
+        // a. API Owner's total account usage (MeterFlow Plan Quota)
+        const ownerUsageKey = `mf:usage:owner:${data.userId}:${currentMonth}`;
+        await redisClient.incr(ownerUsageKey);
+        await redisClient.expire(ownerUsageKey, 60 * 60 * 24 * 60);
+
+        // b. Consumer's usage for this specific API (API specific Quota)
+        const apiUsageKey = `mf:usage:api:${data.apiId}:consumer:${data.consumerId}:${currentMonth}`;
+        await redisClient.incr(apiUsageKey);
+        await redisClient.expire(apiUsageKey, 60 * 60 * 24 * 60);
+
+        // c. Old quota key (for backward compatibility if needed)
+        const legacyQuotaKey = `mf:quota:${data.userId}:${data.apiId}:${currentMonth}`;
+        await redisClient.incr(legacyQuotaKey);
+        await redisClient.expire(legacyQuotaKey, 60 * 60 * 24 * 60);
 
         // 4. Emit Real-time Update via Socket.io
         SocketService.emitToUser(data.userId, 'usage-update', {

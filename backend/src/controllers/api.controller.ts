@@ -164,8 +164,7 @@ export const getAPIDetails = async (req: Request, res: Response): Promise<void> 
       data: {
         api,
         apiKeys: apiKeys.map((k) => {
-          const keyJson = k.toJSON();
-          delete keyJson.key; // Hide hashed key
+          const { key, ...keyJson } = k.toJSON();
           return keyJson;
         }),
       },

@@ -16,12 +16,13 @@ interface APIState {
   logsTotal: number;
   logsPage: number;
   logsPages: number;
+  isUpdating: boolean;
 
   fetchAPIs: (params?: any) => Promise<void>;
   fetchAPIDetails: (id: string) => Promise<void>;
   fetchAPILogs: (id: string, params?: any) => Promise<void>;
   fetchAPIAnalytics: (id: string, params?: any) => Promise<void>;
-  createAPI: (apiData: any) => Promise<APIData | null>;
+  createAPI: (apiData: any) => Promise<any | null>;
   updateAPI: (id: string, apiData: any) => Promise<void>;
   deleteAPI: (id: string) => Promise<void>;
   clearError: () => void;
@@ -42,6 +43,7 @@ export const useAPIStore = create<APIState>((set, get) => ({
   logsTotal: 0,
   logsPage: 1,
   logsPages: 1,
+  isUpdating: false,
 
   fetchAPIs: async (params) => {
     set({ isLoading: true, error: null });
@@ -112,30 +114,30 @@ export const useAPIStore = create<APIState>((set, get) => ({
   },
 
   updateAPI: async (id, apiData) => {
-    set({ isLoading: true, error: null });
+    set({ isUpdating: true, error: null });
     try {
       const response = await apiService.updateAPI(id, apiData);
       set((state) => ({
         apis: state.apis.map((a) => (a._id === id ? response.data : a)),
         currentAPI: state.currentAPI?._id === id ? response.data : state.currentAPI,
-        isLoading: false,
+        isUpdating: false,
       }));
     } catch (error: any) {
-      set({ error: error.response?.data?.error?.message || 'Failed to update API', isLoading: false });
+      set({ error: error.response?.data?.error?.message || 'Failed to update API', isUpdating: false });
     }
   },
 
   deleteAPI: async (id) => {
-    set({ isLoading: true, error: null });
+    set({ isUpdating: true, error: null });
     try {
       await apiService.deleteAPI(id);
       set((state) => ({
         apis: state.apis.filter((a) => a._id !== id),
         currentAPI: state.currentAPI?._id === id ? null : state.currentAPI,
-        isLoading: false,
+        isUpdating: false,
       }));
     } catch (error: any) {
-      set({ error: error.response?.data?.error?.message || 'Failed to delete API', isLoading: false });
+      set({ error: error.response?.data?.error?.message || 'Failed to delete API', isUpdating: false });
     }
   },
 

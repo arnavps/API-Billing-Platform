@@ -12,7 +12,8 @@ export const logUsage = async (req: Request, res: Response, next: NextFunction) 
     requestId,
     apiId: api._id,
     apiKeyId: apiKeyDoc._id,
-    userId: api.userId,
+    userId: api.userId, // API Owner
+    consumerId: apiKeyDoc.userId, // The consumer
     method: req.method,
     path: req.params[0] || '/',
     status: proxyResponse.status,

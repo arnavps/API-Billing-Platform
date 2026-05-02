@@ -14,6 +14,8 @@ import {
   RefreshCw,
   Zap,
   Loader2,
+  Key,
+  AlertCircle,
   Copy
 } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
@@ -99,7 +101,7 @@ export const CreateAPIWizard: React.FC = () => {
   const handleSubmit = async () => {
     const result = await createAPI(formData);
     if (result) {
-      setCreatedAPI(result.data);
+      setCreatedAPI(result);
       setStep(6); // Success step
     }
   };

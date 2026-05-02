@@ -11,6 +11,9 @@ import { APIDashboard } from './pages/apis/APIDashboard';
 import { CreateAPIWizard } from './pages/apis/CreateAPIWizard';
 import { APIDetails } from './pages/apis/APIDetails';
 import Analytics from './pages/Analytics';
+import Plans from './pages/Plans';
+import BillingDashboard from './pages/BillingDashboard';
+import StripeSuccess from './pages/StripeSuccess';
 
 function App() {
   return (
@@ -32,6 +35,9 @@ function App() {
           <Route path="/apis/new" element={<CreateAPIWizard />} />
           <Route path="/apis/:id" element={<APIDetails />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/plans" element={<Plans />} />
+          <Route path="/billing/success" element={<StripeSuccess />} />
+          <Route path="/dashboard/settings/billing" element={<BillingDashboard />} />
           {/* Default redirect for authenticated users */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>

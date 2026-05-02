@@ -29,7 +29,7 @@ export const createAPIKey = async (req: Request, res: Response): Promise<void> =
     const hashedKey = hashAPIKey(rawKey);
 
     const apiKey = await APIKey.create({
-      apiId,
+      apiId: apiId as any,
       userId,
       name,
       key: hashedKey,
@@ -44,7 +44,7 @@ export const createAPIKey = async (req: Request, res: Response): Promise<void> =
 
     res.status(201).json({
       data: {
-        ...apiKey.toJSON(),
+        ...(apiKey as any).toJSON(),
         key: rawKey, // Show only once
       },
     });
@@ -69,8 +69,7 @@ export const getAPIKeys = async (req: Request, res: Response): Promise<void> => 
     res.json({
       data: {
         apiKeys: apiKeys.map((k) => {
-          const keyJson = k.toJSON();
-          delete keyJson.key; // Mask actual hashed key
+          const { key, ...keyJson } = k.toJSON();
           return keyJson;
         }),
       },
@@ -97,8 +96,7 @@ export const updateAPIKey = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const keyJson = apiKey.toJSON();
-    delete keyJson.key;
+    const { key, ...keyJson } = apiKey.toJSON();
 
     res.json({ data: keyJson });
   } catch (error: any) {
@@ -122,7 +120,7 @@ export const rotateAPIKey = async (req: Request, res: Response): Promise<void> =
 
     // Create new key
     const newKey = await APIKey.create({
-      apiId,
+      apiId: apiId as any,
       userId,
       name: `${oldKey.name} (Rotated)`,
       key: hashedKey,
@@ -144,7 +142,7 @@ export const rotateAPIKey = async (req: Request, res: Response): Promise<void> =
     res.json({
       data: {
         newApiKey: {
-          ...newKey.toJSON(),
+          ...(newKey as any).toJSON(),
           key: rawKey,
         },
         oldKeyExpiresAt: oldKey.expiresAt,
