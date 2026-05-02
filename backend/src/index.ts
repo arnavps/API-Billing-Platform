@@ -6,6 +6,7 @@ import { connectDB } from './config/database';
 import { errorHandler, notFound } from './middleware/error';
 import { apiLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth.routes';
+import apiRoutes from './routes/api.routes';
 import cookieParser from 'cookie-parser';
 
 dotenv.config();
@@ -31,6 +32,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api', apiRoutes);
 
 // Error Handling
 app.use(notFound);

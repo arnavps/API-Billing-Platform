@@ -7,6 +7,9 @@ import { ForgotPassword } from './pages/auth/ForgotPassword';
 import { ResetPassword } from './pages/auth/ResetPassword';
 import { VerifyEmail } from './pages/auth/VerifyEmail';
 import { Dashboard } from './pages/Dashboard';
+import { APIDashboard } from './pages/apis/APIDashboard';
+import { CreateAPIWizard } from './pages/apis/CreateAPIWizard';
+import { APIDetails } from './pages/apis/APIDetails';
 
 function App() {
   return (
@@ -24,6 +27,9 @@ function App() {
         {/* Private Routes */}
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/apis" element={<APIDashboard />} />
+          <Route path="/apis/new" element={<CreateAPIWizard />} />
+          <Route path="/apis/:id" element={<APIDetails />} />
           {/* Default redirect for authenticated users */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
