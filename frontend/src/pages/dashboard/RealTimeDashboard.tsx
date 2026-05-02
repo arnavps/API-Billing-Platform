@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
   CheckCircle
 } from 'lucide-react';
+import { StatCard } from '../../components/dashboard/StatCard';
 
 const RealTimeDashboard: React.FC = () => {
   const { isConnected } = useWebSocket();
@@ -25,40 +26,6 @@ const RealTimeDashboard: React.FC = () => {
     ? Math.round(recentRequests.reduce((acc, curr) => acc + curr.responseTime, 0) / recentRequests.length)
     : 0;
 
-  const stats = [
-    { 
-      label: 'Throughput', 
-      value: totalRequests > 0 ? `${(totalRequests / 60).toFixed(2)}` : '0.00', 
-      sub: 'req/sec', 
-      icon: Zap, 
-      color: 'text-primary',
-      bg: 'bg-primary/10'
-    },
-    { 
-      label: 'Active APIs', 
-      value: activeAPIs || '1', 
-      sub: 'running', 
-      icon: Activity, 
-      color: 'text-green-500',
-      bg: 'bg-green-500/10'
-    },
-    { 
-      label: 'Error Rate', 
-      value: totalRequests > 0 ? `${((errors.length / totalRequests) * 100).toFixed(2)}%` : '0.00%', 
-      sub: 'live', 
-      icon: AlertCircle, 
-      color: 'text-red-500',
-      bg: 'bg-red-500/10'
-    },
-    { 
-      label: 'Avg Latency', 
-      value: `${avgLatency}ms`, 
-      sub: 'recent', 
-      icon: Clock, 
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10'
-    },
-  ];
 
   return (
     <div className="space-y-8 pb-12">
@@ -90,24 +57,33 @@ const RealTimeDashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <div 
-            key={i} 
-            className="bg-dark-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-3xl group hover:border-primary/30 transition-all duration-300 shadow-lg hover:shadow-primary/5"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className={`p-3 rounded-2xl ${stat.bg}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
-              <ArrowUpRight className="h-5 w-5 text-gray-700 group-hover:text-primary transition-colors" />
-            </div>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-3xl font-black text-white tabular-nums tracking-tighter">{stat.value}</span>
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{stat.sub}</span>
-            </div>
-            <p className="text-sm font-bold text-gray-400 mt-1 uppercase tracking-tight opacity-60">{stat.label}</p>
-          </div>
-        ))}
+        <StatCard
+          title="Throughput"
+          value={totalRequests > 0 ? `${(totalRequests / 60).toFixed(2)} rps` : '0.00 rps'}
+          icon={Zap}
+          color="primary"
+          data={recentRequests.slice(-10).map(r => ({ value: r.responseTime }))}
+        />
+        <StatCard
+          title="Active APIs"
+          value={activeAPIs || '1'}
+          icon={Activity}
+          color="success"
+        />
+        <StatCard
+          title="Error Rate"
+          value={totalRequests > 0 ? `${((errors.length / totalRequests) * 100).toFixed(2)}%` : '0.00%'}
+          icon={AlertCircle}
+          color="danger"
+          trend={errors.length > 0 ? 'up' : 'stable'}
+        />
+        <StatCard
+          title="Avg Latency"
+          value={`${avgLatency}ms`}
+          icon={Clock}
+          color="warning"
+          data={recentRequests.slice(-20).map(r => ({ value: r.responseTime }))}
+        />
       </div>
 
       {/* Charts & Feeds */}
