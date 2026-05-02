@@ -93,7 +93,8 @@ export const DocsLayout: React.FC = () => {
   }, [searchQuery, searchDocs]);
 
   return (
-    <div className="min-h-screen bg-surface-900 text-slate-200 flex flex-col">
+    <>
+      <div className="min-h-screen bg-surface-900 text-slate-200 flex flex-col">
       {/* Top Navbar */}
       <header className="h-16 border-b border-white/5 bg-surface-900/50 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-6">
         <div className="flex items-center gap-8">
@@ -275,6 +276,7 @@ export const DocsLayout: React.FC = () => {
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+      </AnimatePresence>
+    </>
   );
 };

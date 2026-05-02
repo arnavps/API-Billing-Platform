@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { redisClient } from '../../config/redis';
 import Subscription from '../../models/Subscription';
-import Plan from '../../models/Plan';
+import { WebhookService } from '../../services/webhook.service';
+import { NotificationService } from '../../services/notification.service';
 
 export const checkQuota = async (req: Request, res: Response, next: NextFunction) => {
   const { api, apiKeyDoc } = req;
@@ -14,7 +15,6 @@ export const checkQuota = async (req: Request, res: Response, next: NextFunction
   
   try {
     // 1. Check if the API Owner has an active subscription with MeterFlow
-    // (This limits how many requests the owner's account can process in total)
     const subscription = await Subscription.findOne({ userId: ownerId, status: 'active' }).populate('planId');
     
     let monthlyQuota = 1000; // Default fallback for free tier
@@ -31,7 +31,57 @@ export const checkQuota = async (req: Request, res: Response, next: NextFunction
     const ownerUsageCount = await redisClient.get(ownerUsageKey);
     const totalOwnerUsage = ownerUsageCount ? parseInt(ownerUsageCount) : 0;
 
+    // Check for 80% warning
+    const warningThreshold = monthlyQuota * 0.8;
+    const warningKey = `mf:usage:warned:owner:${ownerId}:${currentMonth}`;
+
+    if (totalOwnerUsage >= warningThreshold && totalOwnerUsage < monthlyQuota) {
+      const alreadyWarned = await redisClient.get(warningKey);
+      if (!alreadyWarned) {
+        // Trigger usage warning
+        await WebhookService.trigger(ownerId, 'usage.warning', {
+          currentUsage: totalOwnerUsage,
+          quota: monthlyQuota,
+          percentage: 80,
+        });
+
+        await NotificationService.create(ownerId, {
+          title: 'Usage Warning (80%)',
+          message: `Your account has used 80% of your monthly request quota (${totalOwnerUsage}/${monthlyQuota}).`,
+          type: 'warning',
+          category: 'usage',
+          actionUrl: '/dashboard/usage',
+          actionText: 'View Usage',
+        });
+
+        // Mark as warned (expire at end of month or after 30 days)
+        await redisClient.set(warningKey, 'true', 'EX', 30 * 24 * 60 * 60);
+      }
+    }
+
     if (totalOwnerUsage >= monthlyQuota) {
+      // Trigger usage exceeded (if not already handled this session/period)
+      const exceededKey = `mf:usage:exceeded:owner:${ownerId}:${currentMonth}`;
+      const alreadyNotifiedExceeded = await redisClient.get(exceededKey);
+
+      if (!alreadyNotifiedExceeded) {
+        await WebhookService.trigger(ownerId, 'usage.exceeded', {
+          currentUsage: totalOwnerUsage,
+          quota: monthlyQuota,
+        });
+
+        await NotificationService.create(ownerId, {
+          title: 'Quota Exceeded',
+          message: `Your account has exceeded your monthly request quota (${monthlyQuota}). Further requests will be blocked.`,
+          type: 'error',
+          category: 'usage',
+          actionUrl: '/dashboard/billing',
+          actionText: 'Upgrade Plan',
+        });
+
+        await redisClient.set(exceededKey, 'true', 'EX', 30 * 24 * 60 * 60);
+      }
+
       return res.status(403).json({
         error: {
           code: 'ACCOUNT_QUOTA_EXCEEDED',
@@ -61,6 +111,6 @@ export const checkQuota = async (req: Request, res: Response, next: NextFunction
     next();
   } catch (error) {
     console.error('Quota Check Error:', error);
-    next(); // Fail open for now, but in production we might want to fail closed or use a fallback
+    next();
   }
 };

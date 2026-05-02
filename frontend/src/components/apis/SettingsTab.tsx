@@ -212,6 +212,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ api }) => {
                         })}
                         className="w-24 bg-dark-900 border border-gray-800 rounded-lg py-1 px-3 text-sm text-white text-right focus:outline-none focus:border-primary/50"
                       />
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">Strategy</span>
                       <select 
@@ -247,25 +248,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ api }) => {
                         />
                       </div>
                     )}
-                  </div>
-                    {formData.configuration.rateLimit.strategy === 'token_bucket' && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Burst Capacity</span>
-                        <input 
-                          type="number" 
-                          value={formData.configuration.rateLimit.burstCapacity}
-                          onChange={(e) => setFormData({ 
-                            ...formData, 
-                            configuration: { 
-                              ...formData.configuration, 
-                              rateLimit: { ...formData.configuration.rateLimit, burstCapacity: parseInt(e.target.value) } 
-                            } 
-                          })}
-                          className="w-24 bg-dark-900 border border-gray-800 rounded-lg py-1 px-3 text-sm text-white text-right focus:outline-none focus:border-primary/50"
-                        />
-                      </div>
-                    )}
-                  </div>
                   </div>
                 )}
               </div>

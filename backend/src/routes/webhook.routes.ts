@@ -1,14 +1,23 @@
 import express from 'express';
 import { protect } from '../middleware/auth';
-import * as webhookController from '../controllers/webhook.controller';
+import {
+  createWebhook,
+  getWebhooks,
+  updateWebhook,
+  deleteWebhook,
+  testWebhook,
+  getWebhookDeliveries
+} from '../controllers/webhook.controller';
 
 const router = express.Router();
 
 router.use(protect);
 
-router.post('/', webhookController.createWebhook);
-router.get('/', webhookController.getWebhooks);
-router.delete('/:id', webhookController.deleteWebhook);
-router.get('/:id/events', webhookController.getWebhookEvents);
+router.post('/', createWebhook);
+router.get('/', getWebhooks);
+router.patch('/:id', updateWebhook);
+router.delete('/:id', deleteWebhook);
+router.post('/:id/test', testWebhook);
+router.get('/:id/deliveries', getWebhookDeliveries);
 
 export default router;

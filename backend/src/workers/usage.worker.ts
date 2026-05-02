@@ -107,14 +107,16 @@ async function checkQuotaThresholds(userId: string, apiId: string) {
     const alreadyNotified = await redisClient.get(lockKey);
 
     if (!alreadyNotified) {
-      await NotificationService.notify(userId, {
+      await NotificationService.create(userId, {
         title: 'Quota Warning',
         message: `Your account has reached 80% of your monthly request quota (${usage.toLocaleString()} / ${quota.toLocaleString()}).`,
         type: 'warning',
-        link: '/dashboard/billing'
+        category: 'usage',
+        actionUrl: '/dashboard',
+        actionText: 'View Usage'
       });
 
-      await WebhookService.trigger(userId, 'quota.warning', {
+      await WebhookService.trigger(userId, 'usage.warning', {
         usage,
         quota,
         percentage,
@@ -131,14 +133,16 @@ async function checkQuotaThresholds(userId: string, apiId: string) {
     const alreadyNotified = await redisClient.get(lockKey);
 
     if (!alreadyNotified) {
-      await NotificationService.notify(userId, {
+      await NotificationService.create(userId, {
         title: 'Quota Exceeded',
         message: `Your account has exceeded your monthly request quota. APIs will be rate-limited until the next cycle or upgrade.`,
         type: 'error',
-        link: '/dashboard/billing'
+        category: 'usage',
+        actionUrl: '/billing',
+        actionText: 'Upgrade Plan'
       });
 
-      await WebhookService.trigger(userId, 'quota.exceeded', {
+      await WebhookService.trigger(userId, 'usage.exceeded', {
         usage,
         quota,
         percentage,

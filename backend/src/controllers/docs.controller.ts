@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { API } from '../models/API';
-import { AppError } from '../middleware/error.middleware';
+import { AppError } from '../middleware/error';
 import axios from 'axios';
 
 export const getPublicAPIs = async (req: Request, res: Response) => {
@@ -327,7 +327,7 @@ resp, err := client.Request("my-api", "/users")
     },
   };
 
-  const guide = guides[id];
+  const guide = guides[id as string];
   if (!guide) {
     throw new AppError('Guide not found', 404);
   }

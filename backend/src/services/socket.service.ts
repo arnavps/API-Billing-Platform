@@ -1,11 +1,12 @@
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import jwt from 'jsonwebtoken';
 
 export class SocketService {
   private static io: Server;
 
-  static init(server: HttpServer) {
-    this.io = new Server(server, {
+  public static init(httpServer: HttpServer): Server {
+    this.io = new Server(httpServer, {
       cors: {
         origin: process.env.FRONTEND_URL || 'http://localhost:5173',
         methods: ['GET', 'POST'],
@@ -13,36 +14,41 @@ export class SocketService {
       },
     });
 
-    this.io.on('connection', (socket) => {
-      console.log('Client connected:', socket.id);
+    this.io.use(async (socket: Socket, next) => {
+      try {
+        const token = socket.handshake.auth.token;
+        if (!token) {
+          return next(new Error('Authentication error'));
+        }
 
-      // Users should join a room based on their userId to receive specific updates
-      socket.on('join', (userId: string) => {
-        socket.join(userId);
-        console.log(`User ${userId} joined their room`);
-      });
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+        (socket as any).userId = decoded.id;
+        next();
+      } catch (error) {
+        next(new Error('Authentication error'));
+      }
+    });
+
+    this.io.on('connection', (socket: Socket) => {
+      const userId = (socket as any).userId;
+      console.log(`User connected to socket: ${userId}`);
+      socket.join(`user:${userId}`);
 
       socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
+        console.log(`User disconnected from socket: ${userId}`);
       });
     });
 
     return this.io;
   }
 
-  /**
-   * Broadcast a real-time event to a specific user
-   */
-  static emitToUser(userId: string, event: string, data: any) {
+  public static emitToUser(userId: string, event: string, data: any): void {
     if (this.io) {
-      this.io.to(userId.toString()).emit(event, data);
+      this.io.to(`user:${userId}`).emit(event, data);
     }
   }
 
-  /**
-   * Broadcast a real-time event to all connected clients
-   */
-  static emitAll(event: string, data: any) {
+  public static emitToAll(event: string, data: any): void {
     if (this.io) {
       this.io.emit(event, data);
     }

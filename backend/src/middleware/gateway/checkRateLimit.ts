@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { RateLimiterService, RateLimitResult } from '../../services/rateLimiter.service';
 import { SocketService } from '../../services/socket.service';
+import { WebhookService } from '../../services/webhook.service';
 
 export const checkRateLimit = async (req: Request, res: Response, next: NextFunction) => {
   const { api, apiKeyDoc } = req;
@@ -49,14 +50,24 @@ export const checkRateLimit = async (req: Request, res: Response, next: NextFunc
     res.setHeader('X-RateLimit-Reset', Math.ceil(result.reset / 1000));
 
     if (!result.allowed) {
+      const userId = api.userId.toString();
+
       // Emit rate limit event via socket
-      SocketService.emitToUser(api.userId.toString(), 'rate_limit_hit', {
+      SocketService.emitToUser(userId, 'rate_limit_hit', {
         apiId: api._id,
         apiName: api.name,
         keyId,
         timestamp: new Date(),
         limit: rateLimit.maxRequests,
         strategy
+      });
+
+      // Trigger Webhook
+      await WebhookService.trigger(userId, 'rate_limit.hit', {
+        apiId: api._id,
+        keyId,
+        strategy,
+        limit: rateLimit.maxRequests,
       });
 
       return res.status(429).json({

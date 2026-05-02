@@ -4,6 +4,8 @@ import axios from 'axios';
 import { API } from '../models/API';
 import { APIKey } from '../models/APIKey';
 import { APILog } from '../models/APILog';
+import { WebhookService } from '../services/webhook.service';
+import { NotificationService } from '../services/notification.service';
 
 const slugify = (text: string) => {
   return text
@@ -78,6 +80,22 @@ export const createAPI = async (req: Request, res: Response): Promise<void> => {
       type: 'test',
       status: 'active',
       permissions: { read: true, write: true, delete: false },
+    });
+
+    // Trigger Webhook and Notification
+    await WebhookService.trigger(userId.toString(), 'api.created', {
+      apiId: api._id,
+      name: api.name,
+      slug: api.slug,
+    });
+
+    await NotificationService.create(userId.toString(), {
+      title: 'API Created',
+      message: `Your new API "${api.name}" has been created successfully.`,
+      type: 'info',
+      category: 'system',
+      actionUrl: `/dashboard/apis/${api._id}`,
+      actionText: 'View API',
     });
 
     res.status(201).json({

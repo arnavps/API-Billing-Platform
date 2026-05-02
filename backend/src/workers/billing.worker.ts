@@ -164,11 +164,13 @@ async function closeCycleAndGenerateInvoice(userId: string, month: Date) {
   await EmailService.sendInvoice(user as any, invoice as any, pdfBuffer);
 
   // 5. Notify & Webhook
-  await NotificationService.notify(userId, {
+  await NotificationService.create(userId, {
     title: 'New Invoice Generated',
     message: `Your invoice ${invoice.invoiceNumber} for $${(invoice.total / 100).toFixed(2)} has been generated.`,
     type: 'info',
-    link: `/dashboard/billing/invoices/${invoice._id}`
+    category: 'billing',
+    actionUrl: `/billing/invoices/${invoice._id}`,
+    actionText: 'View Invoice'
   });
 
   await WebhookService.trigger(userId, 'invoice.created', {
@@ -185,10 +187,10 @@ async function retryPayment(invoiceId: string) {
   if (!invoice || invoice.status !== 'failed') return;
 
   const user = await User.findById(invoice.userId);
-  if (!user || !user.subscription?.customerId) return;
+  if (!user || !user.subscription?.stripeCustomerId) return;
 
   try {
-    const customer = await stripe.customers.retrieve(user.subscription.customerId) as any;
+    const customer = await stripe.customers.retrieve(user.subscription.stripeCustomerId) as any;
     const paymentMethodId = customer.invoice_settings?.default_payment_method;
 
     if (!paymentMethodId) {
@@ -198,7 +200,7 @@ async function retryPayment(invoiceId: string) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: invoice.total,
       currency: invoice.currency.toLowerCase() || 'usd',
-      customer: user.subscription.customerId,
+      customer: user.subscription.stripeCustomerId,
       payment_method: paymentMethodId,
       off_session: true,
       confirm: true,
@@ -207,18 +209,20 @@ async function retryPayment(invoiceId: string) {
 
     if (paymentIntent.status === 'succeeded') {
       invoice.status = 'paid';
-      invoice.payment = {
-        stripePaymentIntentId: paymentIntent.id,
-        paidAt: new Date()
-      } as any;
+      invoice.paymentIntent = paymentIntent.id;
+      invoice.paidAt = new Date();
+      invoice.amountPaid = invoice.total;
+      invoice.amountDue = 0;
       await invoice.save();
       await EmailService.sendPaymentSuccess(user as any, invoice as any);
 
       // Notify & Webhook
-      await NotificationService.notify(user._id.toString(), {
+      await NotificationService.create(user._id.toString(), {
         title: 'Payment Succeeded',
         message: `Your payment for invoice ${invoice.invoiceNumber} was successful.`,
-        type: 'success'
+        type: 'success',
+        category: 'billing',
+        actionUrl: '/billing/invoices'
       });
 
       await WebhookService.trigger(user._id.toString(), 'payment.succeeded', {
@@ -234,11 +238,13 @@ async function retryPayment(invoiceId: string) {
     // Notify & Webhook on failure
     const invoice = await Invoice.findById(invoiceId);
     if (invoice) {
-      await NotificationService.notify(invoice.userId.toString(), {
+      await NotificationService.create(invoice.userId.toString(), {
         title: 'Payment Failed',
         message: `Your payment for invoice ${invoice.invoiceNumber} failed. Please update your payment method.`,
         type: 'error',
-        link: '/dashboard/billing'
+        category: 'billing',
+        actionUrl: '/billing/payment-methods',
+        actionText: 'Update Card'
       });
 
       await WebhookService.trigger(invoice.userId.toString(), 'payment.failed', {

@@ -3,6 +3,8 @@ import { User } from '../models/User';
 import Subscription from '../models/Subscription';
 import Plan from '../models/Plan';
 import Invoice from '../models/Invoice';
+import { WebhookService } from './webhook.service';
+import { NotificationService } from './notification.service';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: '2025-01-27.acacia' as any,
@@ -98,6 +100,36 @@ class StripeService {
   }
 
   /**
+   * Attach a payment method to a customer
+   */
+  async attachPaymentMethod(customerId: string, paymentMethodId: string) {
+    const paymentMethod = await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customerId,
+    });
+
+    // Set as default for invoices
+    await stripe.customers.update(customerId, {
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    });
+
+    return paymentMethod;
+  }
+
+  /**
+   * Create a payment intent for a one-time payment
+   */
+  async createPaymentIntent(customerId: string, amount: number, metadata: any) {
+    return await stripe.paymentIntents.create({
+      customer: customerId,
+      amount,
+      currency: 'usd',
+      metadata,
+    });
+  }
+
+  /**
    * Handle Stripe webhooks
    */
   async handleWebhook(event: any) {
@@ -116,6 +148,9 @@ class StripeService {
         break;
       case 'payment_intent.succeeded':
         await this.handlePaymentIntentSucceeded(event.data.object);
+        break;
+      case 'payment_intent.payment_failed':
+        await this.handlePaymentIntentFailed(event.data.object);
         break;
     }
   }
@@ -153,6 +188,13 @@ class StripeService {
       'subscription.currentPeriodEnd': new Date(stripeSub.current_period_end * 1000),
       'subscription.stripeSubscriptionId': stripeSubscriptionId,
     });
+
+    await NotificationService.create(userId, {
+      title: 'Subscription Active',
+      message: `Your ${plan.name} plan subscription is now active.`,
+      type: 'success',
+      category: 'billing',
+    });
   }
 
   private async handleInvoicePaid(invoice: any) {
@@ -162,7 +204,7 @@ class StripeService {
     const subscription = await Subscription.findOne({ stripeSubscriptionId });
     if (!subscription) return;
 
-    await Invoice.create({
+    const newInvoice = await Invoice.create({
       userId: subscription.userId,
       invoiceNumber: `INV-${Date.now()}`,
       status: 'paid',
@@ -185,6 +227,22 @@ class StripeService {
       gateway: 'stripe',
       externalId: invoice.id,
       dueDate: new Date(invoice.due_date ? invoice.due_date * 1000 : Date.now()),
+    });
+
+    // Trigger events
+    await WebhookService.trigger(subscription.userId.toString(), 'payment.succeeded', {
+      invoiceId: newInvoice._id,
+      amount: invoice.total,
+      currency: invoice.currency,
+    });
+
+    await NotificationService.create(subscription.userId.toString(), {
+      title: 'Payment Succeeded',
+      message: `Payment of ${invoice.total / 100} ${invoice.currency.toUpperCase()} was successful.`,
+      type: 'success',
+      category: 'billing',
+      actionUrl: `/dashboard/billing/invoices/${newInvoice._id}`,
+      actionText: 'View Invoice',
     });
   }
 
@@ -215,18 +273,60 @@ class StripeService {
     await User.findByIdAndUpdate(subscription.userId, {
       'subscription.status': 'cancelled',
     });
+
+    await NotificationService.create(subscription.userId.toString(), {
+      title: 'Subscription Cancelled',
+      message: `Your subscription has been cancelled.`,
+      type: 'warning',
+      category: 'billing',
+    });
   }
 
   private async handlePaymentIntentSucceeded(paymentIntent: any) {
     const invoiceId = paymentIntent.metadata?.invoiceId;
     if (!invoiceId) return;
 
-    await Invoice.findByIdAndUpdate(invoiceId, {
+    const invoice = await Invoice.findByIdAndUpdate(invoiceId, {
       status: 'paid',
       paymentIntent: paymentIntent.id,
       paidAt: new Date(),
       amountPaid: paymentIntent.amount,
       amountDue: 0,
+    }, { new: true });
+
+    if (invoice) {
+      await WebhookService.trigger(invoice.userId.toString(), 'payment.succeeded', {
+        invoiceId: invoice._id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+      });
+
+      await NotificationService.create(invoice.userId.toString(), {
+        title: 'Payment Succeeded',
+        message: `Payment of ${paymentIntent.amount / 100} ${paymentIntent.currency.toUpperCase()} was successful.`,
+        type: 'success',
+        category: 'billing',
+      });
+    }
+  }
+
+  private async handlePaymentIntentFailed(paymentIntent: any) {
+    const userId = paymentIntent.metadata?.userId;
+    if (!userId) return;
+
+    await WebhookService.trigger(userId, 'payment.failed', {
+      amount: paymentIntent.amount,
+      currency: paymentIntent.currency,
+      error: paymentIntent.last_payment_error?.message,
+    });
+
+    await NotificationService.create(userId, {
+      title: 'Payment Failed',
+      message: `Payment of ${paymentIntent.amount / 100} ${paymentIntent.currency.toUpperCase()} failed: ${paymentIntent.last_payment_error?.message || 'Unknown error'}`,
+      type: 'error',
+      category: 'billing',
+      actionUrl: '/dashboard/billing',
+      actionText: 'Resolve Payment',
     });
   }
 }

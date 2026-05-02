@@ -1,6 +1,7 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { User } from '../models/User';
+import Subscription from '../models/Subscription';
 import Invoice from '../models/Invoice';
 
 class RazorpayService {

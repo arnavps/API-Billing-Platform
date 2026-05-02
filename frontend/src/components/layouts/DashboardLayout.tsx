@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authService } from '../../services/auth.service';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { NotificationCenter } from '../dashboard/NotificationCenter';
+import { NotificationDropdown } from '../notifications/NotificationDropdown';
 import { 
   LogOut, 
   User as UserIcon, 
@@ -14,7 +14,8 @@ import {
   Settings, 
   Menu, 
   Plus,
-  CreditCard
+  CreditCard,
+  Webhook
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -60,6 +61,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     { label: 'Overview', icon: LayoutDashboard, to: '/dashboard' },
     { label: 'Live Monitor', icon: Activity, to: '/monitor' },
     { label: 'My APIs', icon: Layers, to: '/apis' },
+    { label: 'Webhooks', icon: Webhook, to: '/webhooks' },
     { label: 'API Keys', icon: Key, to: '/keys' },
     { label: 'Analytics', icon: BarChart3, to: '/analytics' },
     { label: 'Billing', icon: CreditCard, to: '/dashboard/settings/billing' },
@@ -141,7 +143,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           </button>
 
           <div className="flex items-center space-x-4 ml-auto">
-            <NotificationCenter />
+            <NotificationDropdown />
             <Link 
               to="/apis/new"
               className="hidden sm:inline-flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-all shadow-lg shadow-primary/20 active:scale-95"

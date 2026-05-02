@@ -10,6 +10,7 @@ import { Dashboard } from './pages/Dashboard';
 import { APIDashboard } from './pages/apis/APIDashboard';
 import { CreateAPIWizard } from './pages/apis/CreateAPIWizard';
 import { APIDetails } from './pages/apis/APIDetails';
+import { Webhooks } from './pages/Webhooks';
 import Analytics from './pages/Analytics';
 import Plans from './pages/Plans';
 import BillingDashboard from './pages/BillingDashboard';
@@ -49,6 +50,7 @@ function App() {
           <Route path="/apis" element={<APIDashboard />} />
           <Route path="/apis/new" element={<CreateAPIWizard />} />
           <Route path="/apis/:id" element={<APIDetails />} />
+          <Route path="/webhooks" element={<Webhooks />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/monitor" element={<RealTimeDashboard />} />
           <Route path="/plans" element={<Plans />} />

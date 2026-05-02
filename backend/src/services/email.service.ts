@@ -86,6 +86,8 @@ export class EmailService {
         </div>
       `,
     };
+    return this.transporter.sendMail(mailOptions);
+  }
 
   /**
    * Sends a payment reminder email.
@@ -102,6 +104,31 @@ export class EmailService {
           <p>This is a friendly reminder that invoice <strong>${invoice.invoiceNumber}</strong> ($${(invoice.total / 100).toFixed(2)}) is due soon on ${new Date(invoice.dueDate).toLocaleDateString()}.</p>
           <p>Please ensure you have a valid payment method on file to avoid any service interruption.</p>
           <a href="${process.env.FRONTEND_URL}/billing/invoices" style="display: inline-block; background: #0F172A; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Pay Invoice</a>
+        </div>
+      `,
+    };
+
+    return this.transporter.sendMail(mailOptions);
+  }
+
+  /**
+   * Generic send method for notifications and other simple emails.
+   */
+  static async send(to: string, subject: string, data: any) {
+    const mailOptions = {
+      from: '"MeterFlow" <no-reply@meterflow.com>',
+      to,
+      subject,
+      html: `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px;">
+          <h2>${data.notification?.title || subject}</h2>
+          <p>${data.notification?.message || ''}</p>
+          ${data.notification?.actionUrl ? `
+            <a href="${process.env.FRONTEND_URL}${data.notification.actionUrl}" style="display: inline-block; background: #0F172A; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+              ${data.notification.actionText || 'View Details'}
+            </a>
+          ` : ''}
+          <p style="margin-top: 30px; font-size: 12px; color: #94A3B8;">This is an automated notification from MeterFlow.</p>
         </div>
       `,
     };
