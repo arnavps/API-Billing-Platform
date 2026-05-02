@@ -13,10 +13,26 @@ export interface IUser extends Document {
   isActive: boolean;
   subscription: {
     plan: 'free' | 'pro' | 'enterprise';
-    status: 'active' | 'cancelled' | 'past_due';
+    status: 'active' | 'cancelled' | 'past_due' | 'trialing' | 'incomplete';
     currentPeriodStart?: Date;
     currentPeriodEnd?: Date;
-    customerId?: string;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    razorpayCustomerId?: string;
+    razorpaySubscriptionId?: string;
+  };
+  billing: {
+    credits: number;
+    currency: string;
+    taxId?: string;
+    address?: {
+      line1?: string;
+      line2?: string;
+      city?: string;
+      state?: string;
+      postal_code?: string;
+      country?: string;
+    };
   };
   settings: {
     notifications: boolean;
@@ -86,12 +102,28 @@ const userSchema = new Schema(
       },
       status: {
         type: String,
-        enum: ['active', 'cancelled', 'past_due'],
+        enum: ['active', 'cancelled', 'past_due', 'trialing', 'incomplete'],
         default: 'active',
       },
       currentPeriodStart: Date,
       currentPeriodEnd: Date,
-      customerId: String,
+      stripeCustomerId: String,
+      stripeSubscriptionId: String,
+      razorpayCustomerId: String,
+      razorpaySubscriptionId: String,
+    },
+    billing: {
+      credits: { type: Number, default: 0 },
+      currency: { type: String, default: 'USD' },
+      taxId: String,
+      address: {
+        line1: String,
+        line2: String,
+        city: String,
+        state: String,
+        postal_code: String,
+        country: String,
+      },
     },
     settings: {
       notifications: { type: Boolean, default: true },

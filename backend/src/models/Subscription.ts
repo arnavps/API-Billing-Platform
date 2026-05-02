@@ -6,8 +6,10 @@ export interface ISubscription extends Document {
   status: 'active' | 'cancelled' | 'past_due' | 'unpaid' | 'trialing';
   currentPeriodStart: Date;
   currentPeriodEnd: Date;
-  stripeSubscriptionId: string;
-  stripeCustomerId: string;
+  stripeSubscriptionId?: string;
+  stripeCustomerId?: string;
+  razorpaySubscriptionId?: string;
+  razorpayCustomerId?: string;
   cancelAtPeriodEnd: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -24,8 +26,10 @@ const SubscriptionSchema: Schema = new Schema(
     },
     currentPeriodStart: { type: Date, required: true },
     currentPeriodEnd: { type: Date, required: true },
-    stripeSubscriptionId: { type: String, required: true, unique: true },
-    stripeCustomerId: { type: String, required: true },
+    stripeSubscriptionId: { type: String, unique: true, sparse: true },
+    stripeCustomerId: { type: String },
+    razorpaySubscriptionId: { type: String, unique: true, sparse: true },
+    razorpayCustomerId: { type: String },
     cancelAtPeriodEnd: { type: Boolean, default: false },
   },
   { timestamps: true }

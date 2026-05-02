@@ -39,6 +39,7 @@ app.use(cors({
 
 // Stripe webhook needs raw body for signature verification
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), BillingController.handleWebhook);
+app.post('/api/billing/razorpay-webhook', express.json(), BillingController.handleRazorpayWebhook);
 
 app.use(express.json());
 app.use(cookieParser());

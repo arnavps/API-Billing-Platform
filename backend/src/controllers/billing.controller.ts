@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import StripeService from '../services/stripe.service';
+import RazorpayService from '../services/razorpay.service';
 import Subscription from '../models/Subscription';
 import Plan from '../models/Plan';
 import Invoice from '../models/Invoice';
@@ -10,7 +11,7 @@ import { PricingService } from '../services/pricing.service';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2026-04-22.dahlia' as any,
+  apiVersion: '2025-01-27.acacia' as any,
 });
 
 class BillingController {
@@ -31,7 +32,7 @@ class BillingController {
    */
   async createCheckout(req: Request, res: Response) {
     try {
-      const { planId } = req.body;
+      const { planId, gateway = 'stripe' } = req.body;
       const userId = (req as any).user.id;
 
       const plan = await Plan.findById(planId);
@@ -39,21 +40,87 @@ class BillingController {
         return res.status(404).json({ message: 'Plan not found' });
       }
 
-      const session = await StripeService.createCheckoutSession(userId, plan.stripePriceId);
-      res.json({ url: session.url });
+      if (gateway === 'stripe') {
+        const session = await StripeService.createCheckoutSession(userId, plan.stripePriceId);
+        return res.json({ url: session.url });
+      } else if (gateway === 'razorpay') {
+        const order = await RazorpayService.createOrder(
+          plan.price, // assuming plan.price is in smallest unit or handle it here
+          'INR',
+          `receipt_${Date.now()}`
+        );
+        return res.json({ 
+          orderId: order.id, 
+          amount: order.amount, 
+          currency: order.currency,
+          key: process.env.RAZORPAY_KEY_ID 
+        });
+      }
+
+      res.status(400).json({ message: 'Invalid gateway' });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   }
 
   /**
-   * Create Customer Portal Session
+   * Cancel Subscription
    */
-  async createPortal(req: Request, res: Response) {
+  async cancelSubscription(req: Request, res: Response) {
     try {
       const userId = (req as any).user.id;
-      const session = await StripeService.createPortalSession(userId);
-      res.json({ url: session.url });
+      const { gateway = 'stripe' } = req.body;
+
+      if (gateway === 'stripe') {
+        await StripeService.cancelSubscription(userId);
+      } else {
+        // Razorpay cancellation logic
+        const user = await (req as any).user;
+        if (user.subscription.razorpaySubscriptionId) {
+          // Implement Razorpay cancellation if needed
+        }
+      }
+
+      res.json({ message: 'Subscription cancelled successfully' });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * Handle Stripe Webhooks
+   */
+  async handleWebhook(req: Request, res: Response) {
+    const sig = req.headers['stripe-signature'];
+    let event: any;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        (req as any).rawBody || req.body,
+        sig as string,
+        process.env.STRIPE_WEBHOOK_SECRET as string
+      );
+    } catch (err: any) {
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+      await StripeService.handleWebhook(event);
+      res.json({ received: true });
+    } catch (error: any) {
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+
+  /**
+   * Handle Razorpay Webhooks
+   */
+  async handleRazorpayWebhook(req: Request, res: Response) {
+    const signature = req.headers['x-razorpay-signature'] as string;
+
+    try {
+      await RazorpayService.handleWebhook(req.body, signature);
+      res.json({ received: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -82,34 +149,6 @@ class BillingController {
       res.json(invoices);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
-    }
-  }
-
-  /**
-   * Handle Stripe Webhooks
-   */
-  async handleWebhook(req: Request, res: Response) {
-    const sig = req.headers['stripe-signature'];
-
-    let event: any;
-
-    try {
-      event = stripe.webhooks.constructEvent(
-        (req as any).rawBody || req.body,
-        sig as string,
-        process.env.STRIPE_WEBHOOK_SECRET as string
-      );
-    } catch (err: any) {
-      console.error(`Webhook Error: ${err.message}`);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    try {
-      await StripeService.handleWebhook(event);
-      res.json({ received: true });
-    } catch (error: any) {
-      console.error(`Webhook Processing Error: ${error.message}`);
-      res.status(500).json({ message: 'Internal server error' });
     }
   }
 

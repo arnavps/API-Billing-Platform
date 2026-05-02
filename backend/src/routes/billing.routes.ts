@@ -14,5 +14,6 @@ router.get('/current-cycle', protect, BillingController.getCurrentCycle);
 router.get('/payment-methods', protect, BillingController.getPaymentMethods);
 router.post('/payment-methods', protect, BillingController.addPaymentMethod);
 router.post('/invoices/:invoiceId/pay', protect, BillingController.payInvoice);
+router.delete('/subscription', protect, BillingController.cancelSubscription);
 
 export default router;

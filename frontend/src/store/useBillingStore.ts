@@ -55,9 +55,10 @@ interface BillingState {
   fetchSubscription: () => Promise<void>;
   fetchInvoices: () => Promise<void>;
   fetchCurrentCycle: () => Promise<void>;
-  createCheckout: (planId: string) => Promise<string>;
+  createCheckout: (planId: string, gateway?: 'stripe' | 'razorpay') => Promise<any>;
   createPortal: () => Promise<string>;
   payInvoice: (invoiceId: string) => Promise<{ clientSecret: string }>;
+  cancelSubscription: (gateway?: 'stripe' | 'razorpay') => Promise<void>;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -100,16 +101,30 @@ export const useBillingStore = create<BillingState>((set) => ({
     }
   },
 
-  createCheckout: async (planId: string) => {
+  createCheckout: async (planId: string, gateway: 'stripe' | 'razorpay' = 'stripe') => {
     try {
       const response = await axios.post(
         `${API_URL}/billing/checkout`,
-        { planId },
+        { planId, gateway },
         { withCredentials: true }
       );
-      return response.data.url;
+      return response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to create checkout session');
+    }
+  },
+
+  cancelSubscription: async (gateway: 'stripe' | 'razorpay' = 'stripe') => {
+    try {
+      await axios.delete(`${API_URL}/billing/subscription`, {
+        data: { gateway },
+        withCredentials: true,
+      });
+      // Refresh subscription state
+      const response = await axios.get(`${API_URL}/billing/subscription`, { withCredentials: true });
+      set({ subscription: response.data });
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to cancel subscription');
     }
   },
 

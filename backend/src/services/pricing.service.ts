@@ -79,4 +79,18 @@ export class PricingService {
 
     return { lineItems, subtotal };
   }
+
+  /**
+   * Calculates tax based on country and subtotal.
+   */
+  static calculateTax(subtotal: number, country: string = 'US'): { rate: number, amount: number } {
+    // Basic tax logic
+    if (country === 'IN') {
+      return { rate: 18, amount: Math.round(subtotal * 0.18) }; // GST
+    }
+    if (country === 'US') {
+      return { rate: 8.5, amount: Math.round(subtotal * 0.085) }; // US Sales Tax
+    }
+    return { rate: 0, amount: 0 };
+  }
 }

@@ -5,7 +5,7 @@ import Plan from '../models/Plan';
 import Invoice from '../models/Invoice';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2026-04-22.dahlia' as any, // Using the version requested by the types
+  apiVersion: '2025-01-27.acacia' as any,
 });
 
 class StripeService {
@@ -16,8 +16,8 @@ class StripeService {
     const user = await User.findById(userId);
     if (!user) throw new Error('User not found');
 
-    if (user.subscription?.customerId) {
-      return user.subscription.customerId;
+    if (user.subscription?.stripeCustomerId) {
+      return user.subscription.stripeCustomerId;
     }
 
     const customer = await stripe.customers.create({
@@ -28,10 +28,7 @@ class StripeService {
       },
     });
 
-    user.subscription = {
-      ...user.subscription,
-      customerId: customer.id,
-    } as any;
+    user.subscription.stripeCustomerId = customer.id;
     await user.save();
 
     return customer.id;
@@ -64,62 +61,27 @@ class StripeService {
   }
 
   /**
-   * Create a customer portal session for managing subscriptions
+   * Cancel a subscription
    */
-  async createPortalSession(userId: string) {
-    const customerId = await this.getOrCreateCustomer(userId);
+  async cancelSubscription(userId: string) {
+    const user = await User.findById(userId);
+    if (!user || !user.subscription.stripeSubscriptionId) {
+      throw new Error('No active Stripe subscription found');
+    }
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${process.env.FRONTEND_URL}/dashboard/settings/billing`,
+    const subscription = await stripe.subscriptions.update(user.subscription.stripeSubscriptionId, {
+      cancel_at_period_end: true,
     });
 
-    return session;
-  }
+    await Subscription.findOneAndUpdate(
+      { userId },
+      { cancelAtPeriodEnd: true }
+    );
 
-  /**
-   * Attach a payment method to a customer
-   */
-  async attachPaymentMethod(customerId: string, paymentMethodId: string) {
-    const paymentMethod = await stripe.paymentMethods.attach(paymentMethodId, {
-      customer: customerId,
-    });
+    user.subscription.status = 'cancelled';
+    await user.save();
 
-    // Optionally set as default for the customer
-    await stripe.customers.update(customerId, {
-      invoice_settings: {
-        default_payment_method: paymentMethodId,
-      },
-    });
-
-    return paymentMethod;
-  }
-
-  /**
-   * List payment methods for a customer
-   */
-  async listPaymentMethods(customerId: string) {
-    const paymentMethods = await stripe.paymentMethods.list({
-      customer: customerId,
-      type: 'card',
-    });
-    return paymentMethods.data;
-  }
-
-  /**
-   * Create a payment intent for a specific amount
-   */
-  async createPaymentIntent(customerId: string, amount: number, metadata: any = {}) {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: 'usd',
-      customer: customerId,
-      metadata,
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
-    return paymentIntent;
+    return subscription;
   }
 
   /**
@@ -127,38 +89,21 @@ class StripeService {
    */
   async handleWebhook(event: any) {
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as any;
-        await this.handleCheckoutCompleted(session);
+      case 'checkout.session.completed':
+        await this.handleCheckoutCompleted(event.data.object);
         break;
-      }
-      case 'invoice.paid': {
-        const invoice = event.data.object as any;
-        await this.handleInvoicePaid(invoice);
+      case 'invoice.paid':
+        await this.handleInvoicePaid(event.data.object);
         break;
-      }
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as any;
-        await this.handleSubscriptionUpdated(subscription);
+      case 'customer.subscription.updated':
+        await this.handleSubscriptionUpdated(event.data.object);
         break;
-      }
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as any;
-        await this.handleSubscriptionDeleted(subscription);
+      case 'customer.subscription.deleted':
+        await this.handleSubscriptionDeleted(event.data.object);
         break;
-      }
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as any;
-        await this.handlePaymentIntentSucceeded(paymentIntent);
+      case 'payment_intent.succeeded':
+        await this.handlePaymentIntentSucceeded(event.data.object);
         break;
-      }
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object as any;
-        await this.handlePaymentIntentFailed(paymentIntent);
-        break;
-      }
-      default:
-        console.log(`Unhandled event type ${event.type}`);
     }
   }
 
@@ -188,12 +133,12 @@ class StripeService {
       { upsert: true, new: true }
     );
 
-    // Update user's primary subscription info
     await User.findByIdAndUpdate(userId, {
       'subscription.plan': plan.name.toLowerCase() as any,
       'subscription.status': 'active',
       'subscription.currentPeriodStart': new Date(stripeSub.current_period_start * 1000),
       'subscription.currentPeriodEnd': new Date(stripeSub.current_period_end * 1000),
+      'subscription.stripeSubscriptionId': stripeSubscriptionId,
     });
   }
 
@@ -206,21 +151,32 @@ class StripeService {
 
     await Invoice.create({
       userId: subscription.userId,
-      subscriptionId: subscription._id,
-      amount: invoice.amount_paid / 100,
-      currency: invoice.currency,
+      invoiceNumber: `INV-${Date.now()}`,
       status: 'paid',
-      stripeInvoiceId: invoice.id,
-      pdfUrl: invoice.invoice_pdf,
-      billingReason: invoice.billing_reason,
-      date: new Date(),
+      period: {
+        start: new Date(invoice.period_start * 1000),
+        end: new Date(invoice.period_end * 1000),
+      },
+      lineItems: invoice.lines.data.map((line: any) => ({
+        type: 'subscription',
+        description: line.description,
+        quantity: line.quantity,
+        unitPrice: line.amount,
+        amount: line.amount,
+      })),
+      subtotal: invoice.subtotal,
+      total: invoice.total,
+      amountPaid: invoice.amount_paid,
+      amountDue: 0,
+      currency: invoice.currency,
+      gateway: 'stripe',
+      externalId: invoice.id,
+      dueDate: new Date(invoice.due_date ? invoice.due_date * 1000 : Date.now()),
     });
   }
 
   private async handleSubscriptionUpdated(stripeSub: any) {
-    const subscription = await Subscription.findOne({
-      stripeSubscriptionId: stripeSub.id,
-    });
+    const subscription = await Subscription.findOne({ stripeSubscriptionId: stripeSub.id });
     if (!subscription) return;
 
     subscription.status = stripeSub.status as any;
@@ -229,7 +185,6 @@ class StripeService {
     subscription.cancelAtPeriodEnd = stripeSub.cancel_at_period_end;
     await subscription.save();
 
-    // Sync with User model
     await User.findByIdAndUpdate(subscription.userId, {
       'subscription.status': stripeSub.status as any,
       'subscription.currentPeriodStart': subscription.currentPeriodStart,
@@ -238,9 +193,7 @@ class StripeService {
   }
 
   private async handleSubscriptionDeleted(stripeSub: any) {
-    const subscription = await Subscription.findOne({
-      stripeSubscriptionId: stripeSub.id,
-    });
+    const subscription = await Subscription.findOne({ stripeSubscriptionId: stripeSub.id });
     if (!subscription) return;
 
     subscription.status = 'cancelled';
@@ -261,15 +214,6 @@ class StripeService {
       paidAt: new Date(),
       amountPaid: paymentIntent.amount,
       amountDue: 0,
-    });
-  }
-
-  private async handlePaymentIntentFailed(paymentIntent: any) {
-    const invoiceId = paymentIntent.metadata?.invoiceId;
-    if (!invoiceId) return;
-
-    await Invoice.findByIdAndUpdate(invoiceId, {
-      status: 'failed',
     });
   }
 }

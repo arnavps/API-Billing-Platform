@@ -30,8 +30,10 @@ export interface IInvoice extends Document {
   amountPaid: number; // in cents
   amountDue: number; // in cents
   currency: string;
+  gateway: 'stripe' | 'razorpay' | 'manual';
   paymentMethod?: string;
   paymentIntent?: string;
+  externalId?: string; // Stripe Invoice ID or Razorpay Payment ID
   pdfUrl?: string;
   paidAt?: Date;
   dueDate: Date;
@@ -77,8 +79,14 @@ const InvoiceSchema: Schema = new Schema(
     amountPaid: { type: Number, default: 0 },
     amountDue: { type: Number, default: 0 },
     currency: { type: String, default: 'USD' },
+    gateway: {
+      type: String,
+      enum: ['stripe', 'razorpay', 'manual'],
+      default: 'manual',
+    },
     paymentMethod: { type: String },
     paymentIntent: { type: String },
+    externalId: { type: String, index: true },
     pdfUrl: { type: String },
     paidAt: { type: Date },
     dueDate: { type: Date, required: true },
