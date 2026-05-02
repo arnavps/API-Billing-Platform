@@ -3,13 +3,17 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import { connectDB } from './config/database';
+import { createServer } from 'http';
+import { SocketService } from './services/socket.service';
 import { errorHandler, notFound } from './middleware/error';
 import { apiLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth.routes';
 import apiRoutes from './routes/api.routes';
+import analyticsRoutes from './routes/analytics.routes';
 import gatewayRoutes from './routes/gateway.routes';
 import cookieParser from 'cookie-parser';
 import './workers/usage.worker';
+import './workers/aggregation.worker';
 
 dotenv.config();
 
@@ -36,6 +40,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api', apiRoutes);
 
 // Error Handling
@@ -43,7 +48,11 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
+const httpServer = createServer(app);
 
-app.listen(PORT, () => {
+// Initialize Socket.io
+SocketService.init(httpServer);
+
+httpServer.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });

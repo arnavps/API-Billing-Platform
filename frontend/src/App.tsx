@@ -10,6 +10,7 @@ import { Dashboard } from './pages/Dashboard';
 import { APIDashboard } from './pages/apis/APIDashboard';
 import { CreateAPIWizard } from './pages/apis/CreateAPIWizard';
 import { APIDetails } from './pages/apis/APIDetails';
+import Analytics from './pages/Analytics';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/apis" element={<APIDashboard />} />
           <Route path="/apis/new" element={<CreateAPIWizard />} />
           <Route path="/apis/:id" element={<APIDetails />} />
+          <Route path="/analytics" element={<Analytics />} />
           {/* Default redirect for authenticated users */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { usageQueue } from '../../config/queues';
+import { JobService } from '../../services/job.service';
 
 export const logUsage = async (req: Request, res: Response, next: NextFunction) => {
   const { api, apiKeyDoc, proxyResponse, requestId, startTime } = req;
@@ -13,29 +13,26 @@ export const logUsage = async (req: Request, res: Response, next: NextFunction) 
     apiId: api._id,
     apiKeyId: apiKeyDoc._id,
     userId: api.userId,
+    method: req.method,
+    path: req.params[0] || '/',
+    status: proxyResponse.status,
+    latency: duration,
+    ip: req.ip || req.socket.remoteAddress,
+    userAgent: req.headers['user-agent'],
     request: {
-      method: req.method,
-      path: req.params[0] || '/',
-      query: req.query,
       headers: req.headers,
       body: req.body,
-      ip: req.ip || req.socket.remoteAddress,
     },
     response: {
-      status: proxyResponse.status,
       headers: proxyResponse.headers,
       body: proxyResponse.data,
-      latency: duration,
     },
     timestamp: new Date(),
   };
 
   try {
     // Add to queue for background processing
-    await usageQueue.add('log-request', logData, {
-      removeOnComplete: true,
-      removeOnFail: 1000,
-    });
+    await JobService.queueLogRequest(logData);
   } catch (error) {
     console.error('Failed to queue usage log:', error);
   }

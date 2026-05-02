@@ -2,6 +2,7 @@ import { Worker, Job } from 'bullmq';
 import { APILog } from '../models/APILog';
 import { API } from '../models/API';
 import { redisClient } from '../config/redis';
+import { SocketService } from '../services/socket.service';
 
 export const usageWorker = new Worker(
   'usage-logs',
@@ -33,6 +34,19 @@ export const usageWorker = new Worker(
         await redisClient.incr(quotaKey);
         // Set expiry for 2 months to be safe
         await redisClient.expire(quotaKey, 60 * 60 * 24 * 60);
+
+        // 4. Emit Real-time Update via Socket.io
+        SocketService.emitToUser(data.userId, 'usage-update', {
+          apiId: data.apiId,
+          status: data.response.status,
+          latency: data.latency,
+          timestamp: new Date(),
+        });
+
+        SocketService.emitToUser(data.userId, 'realtime-log', {
+          ...data,
+          timestamp: new Date(),
+        });
 
       } catch (error) {
         console.error('Error in usage worker:', error);
