@@ -1,127 +1,165 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
-import { authService } from '../services/auth.service';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, User as UserIcon, Shield, Activity } from 'lucide-react';
+import { DashboardLayout } from '../components/layouts/DashboardLayout';
+import { StatCard } from '../components/dashboard/StatCard';
+import { HealthGrid } from '../components/dashboard/HealthGrid';
+import { LatencyHeatmap } from '../components/dashboard/LatencyHeatmap';
+import { LiveRequestFeed } from '../components/dashboard/LiveRequestFeed';
+import { analyticsService, AnalyticsOverview } from '../services/analytics.service';
+import { 
+  Activity, 
+  Zap, 
+  Users, 
+  ShieldCheck, 
+  ArrowUpRight, 
+  TrendingUp,
+  Globe
+} from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { user, clearAuth } = useAuthStore();
-  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } catch (error) {
-      console.error('Logout failed', error);
-    } finally {
-      clearAuth();
-      navigate('/login');
-    }
-  };
+  useEffect(() => {
+    const fetchOverview = async () => {
+      try {
+        const data = await analyticsService.getOverview('24h');
+        setOverview(data);
+      } catch (error) {
+        console.error('Failed to fetch overview', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOverview();
+  }, []);
+
+  // Mock data for health grid
+  const apiHealth = [
+    { id: '1', name: 'Weather API', status: 'active' as const, latency: 45, uptime: 99.9, region: 'US-East' },
+    { id: '2', name: 'Crypto Index', status: 'active' as const, latency: 120, uptime: 98.5, region: 'EU-West' },
+    { id: '3', name: 'User Auth Service', status: 'active' as const, latency: 32, uptime: 100, region: 'Global' },
+    { id: '4', name: 'Payment Gateway', status: 'active' as const, latency: 210, uptime: 99.9, region: 'US-West' },
+  ];
 
   return (
-    <div className="min-h-screen bg-dark-950 text-white">
-      {/* Navbar */}
-      <nav className="border-b border-gray-800 bg-dark-900 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center space-x-2">
-              <div className="p-1.5 bg-gradient-to-br from-primary to-secondary rounded-lg shadow-lg">
-                <Activity className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                MeterFlow
-              </span>
+    <DashboardLayout>
+      <div className="space-y-8 pb-12">
+        {/* Welcome Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-white mb-2">
+              Welcome back, <span className="text-gradient">{user?.firstName}</span>
+            </h1>
+            <p className="text-gray-400 font-medium">Your API infrastructure is performing within optimal parameters.</p>
+          </div>
+          
+          <div className="flex items-center space-x-3 bg-white/5 border border-white/10 px-4 py-2 rounded-2xl backdrop-blur-md shadow-xl">
+            <div className="flex -space-x-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 w-8 rounded-full border-2 border-dark-900 bg-gradient-to-br from-gray-700 to-gray-900" />
+              ))}
             </div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              <span className="text-white">12 Teams</span> Active
+            </div>
+          </div>
+        </div>
+
+        {/* Core Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Requests"
+            value={overview?.totalRequests.toLocaleString() || '0'}
+            change={12.5}
+            trend="up"
+            icon={Activity}
+            color="primary"
+            loading={loading}
+            data={[
+              { value: 400 }, { value: 300 }, { value: 600 }, { value: 800 }, 
+              { value: 500 }, { value: 900 }, { value: 1200 }
+            ]}
+          />
+          <StatCard
+            title="Success Rate"
+            value={`${overview?.successRate.toFixed(1) || '0'}%`}
+            change={0.2}
+            trend="up"
+            icon={ShieldCheck}
+            color="success"
+            loading={loading}
+            data={[
+              { value: 99.1 }, { value: 99.5 }, { value: 99.2 }, { value: 99.8 }, 
+              { value: 99.7 }, { value: 99.9 }, { value: 99.9 }
+            ]}
+          />
+          <StatCard
+            title="Avg Latency"
+            value={`${Math.round(overview?.avgLatency || 0)}ms`}
+            change={5.4}
+            trend="down"
+            icon={Zap}
+            color="warning"
+            loading={loading}
+            data={[
+              { value: 120 }, { value: 140 }, { value: 110 }, { value: 95 }, 
+              { value: 105 }, { value: 88 }, { value: 92 }
+            ]}
+          />
+          <StatCard
+            title="Data Transferred"
+            value="1.2 GB"
+            change={8.1}
+            trend="up"
+            icon={Globe}
+            color="info"
+            loading={loading}
+            data={[
+              { value: 200 }, { value: 450 }, { value: 300 }, { value: 600 }, 
+              { value: 800 }, { value: 750 }, { value: 900 }
+            ]}
+          />
+        </div>
+
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Health & Latency */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="h-[450px]">
+              <HealthGrid apis={apiHealth} loading={loading} />
+            </div>
+            <div className="h-[350px]">
+              <LatencyHeatmap loading={loading} />
+            </div>
+          </div>
+
+          {/* Right Column - Live Feed & Insights */}
+          <div className="lg:col-span-1 space-y-8">
+            <LiveRequestFeed />
             
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-300">
-                <UserIcon className="h-4 w-4" />
-                <span>{user?.firstName} {user?.lastName}</span>
+            {/* Insights Card */}
+            <div className="glass-card p-8 bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20 relative overflow-hidden group">
+              <div className="relative z-10">
+                <div className="flex items-center space-x-2 mb-6">
+                  <TrendingUp className="h-5 w-5 text-primary-400" />
+                  <h4 className="text-sm font-black uppercase tracking-widest text-white">Smart Insights</h4>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed mb-6 font-medium">
+                  We've detected a <span className="text-white font-bold">15% increase</span> in traffic from Southeast Asia. Consider deploying a new edge node in Singapore to reduce latency by approx. <span className="text-green-400 font-bold">40ms</span>.
+                </p>
+                <button className="flex items-center space-x-2 text-xs font-black uppercase tracking-widest text-primary-400 group-hover:text-primary-300 transition-colors">
+                  <span>View Optimization Plan</span>
+                  <ArrowUpRight className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-dark-900"
-                aria-label="Logout"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
+              <Activity className="absolute -bottom-10 -right-10 h-40 w-40 text-white/5 -rotate-12 group-hover:rotate-0 transition-transform duration-700" />
             </div>
           </div>
         </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="md:flex md:items-center md:justify-between mb-8">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-2xl font-bold leading-7 sm:text-3xl sm:truncate">
-                Dashboard
-              </h2>
-              <p className="mt-1 text-sm text-gray-400">
-                Welcome back, {user?.firstName}. You are logged in.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* User Profile Card */}
-            <div className="bg-dark-900 rounded-xl border border-gray-800 p-6 shadow-sm">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <UserIcon className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-medium text-white">Profile</h3>
-              </div>
-              <dl className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-gray-400">Name</dt>
-                  <dd className="text-white font-medium">{user?.firstName} {user?.lastName}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-400">Email</dt>
-                  <dd className="text-white font-medium truncate ml-4">{user?.email}</dd>
-                </div>
-                <div className="flex justify-between items-center">
-                  <dt className="text-gray-400">Status</dt>
-                  <dd>
-                    {user?.emailVerified ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
-                        Verified
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                        Unverified
-                      </span>
-                    )}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            {/* Account Settings Card */}
-            <div className="bg-dark-900 rounded-xl border border-gray-800 p-6 shadow-sm">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="p-2 bg-secondary/10 rounded-lg">
-                  <Shield className="h-6 w-6 text-secondary" />
-                </div>
-                <h3 className="text-lg font-medium text-white">Account</h3>
-              </div>
-              <dl className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-gray-400">Role</dt>
-                  <dd className="text-white font-medium capitalize">{user?.role.replace('_', ' ')}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-400">Plan</dt>
-                  <dd className="text-white font-medium capitalize">{user?.subscription?.plan || 'Free'}</dd>
-                </div>
-              </dl>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
