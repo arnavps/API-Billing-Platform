@@ -3,12 +3,10 @@ import { useAnalyticsStore } from '../store/useAnalyticsStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { RequestsAreaChart, LatencyChart, EndpointsBarChart } from '../components/analytics/Charts';
 import { 
-  BarChart3, 
   Activity, 
   Zap, 
   AlertCircle, 
   Clock, 
-  Filter,
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
@@ -35,7 +33,7 @@ const Analytics: React.FC = () => {
     fetchEndpoints();
 
     if (user) {
-      initSocket(user.id);
+      initSocket(user._id);
     }
 
     return () => disconnectSocket();

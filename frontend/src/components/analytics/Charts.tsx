@@ -128,7 +128,7 @@ export const EndpointsBarChart: React.FC<{ data: { endpoint: string; count: numb
             cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
           />
           <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={20}>
-            {data.map((entry, index) => (
+            {data.map((_entry, index) => (
               <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#8b5cf6' : '#6366f1'} />
             ))}
           </Bar>

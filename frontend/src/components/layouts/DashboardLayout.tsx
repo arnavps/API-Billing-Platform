@@ -12,8 +12,6 @@ import {
   BarChart3, 
   Settings, 
   Menu, 
-  X,
-  ChevronRight,
   Plus,
   CreditCard
 } from 'lucide-react';

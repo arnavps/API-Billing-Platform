@@ -9,7 +9,6 @@ import {
   Clock, 
   Code,
   Globe,
-  Database,
   Terminal
 } from 'lucide-react';
 import { apiService } from '../../services/api.service';

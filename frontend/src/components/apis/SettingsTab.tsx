@@ -4,10 +4,7 @@ import {
   Trash2, 
   Save, 
   Globe, 
-  Lock, 
   AlertTriangle, 
-  Clock, 
-  Shield, 
   Zap,
   Info,
   Loader2

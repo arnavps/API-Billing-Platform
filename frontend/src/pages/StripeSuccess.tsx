@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBillingStore } from '../store/useBillingStore';
 

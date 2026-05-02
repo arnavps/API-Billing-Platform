@@ -5,14 +5,11 @@ import {
   RefreshCw, 
   Trash2, 
   Shield, 
-  Clock, 
-  Lock,
   Loader2,
   Copy,
   Check,
   AlertCircle,
-  MoreVertical,
-  ChevronDown
+  Settings
 } from 'lucide-react';
 import { useAPIKeyStore } from '../../store/useAPIKeyStore';
 
