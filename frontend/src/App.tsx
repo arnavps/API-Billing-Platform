@@ -1,19 +1,38 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthLayout } from './components/layouts/AuthLayout';
+import { PrivateRoute } from './components/layouts/PrivateRoute';
+import { Login } from './pages/auth/Login';
+import { Register } from './pages/auth/Register';
+import { ForgotPassword } from './pages/auth/ForgotPassword';
+import { ResetPassword } from './pages/auth/ResetPassword';
+import { VerifyEmail } from './pages/auth/VerifyEmail';
+import { Dashboard } from './pages/Dashboard';
+
 function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="glass-card max-w-lg w-full p-8 text-center space-y-6">
-        <h1 className="text-4xl font-bold tracking-tight">
-          Welcome to <span className="text-gradient">MeterFlow</span>
-        </h1>
-        <p className="text-slate-400 text-lg">
-          The premium API billing platform for modern businesses.
-        </p>
-        <button className="bg-primary-600 hover:bg-primary-500 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg shadow-primary-500/20">
-          Get Started
-        </button>
-      </div>
-    </div>
-  )
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        </Route>
+
+        {/* Private Routes */}
+        <Route element={<PrivateRoute />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          {/* Default redirect for authenticated users */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+
+        {/* Catch all unauthenticated */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;

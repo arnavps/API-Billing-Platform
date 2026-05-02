@@ -16,9 +16,11 @@
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.76.4",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.4.1",
     "express-validator": "^7.3.2",
     "helmet": "^8.1.0",
     "ioredis": "^5.10.1",
@@ -28,10 +30,12 @@
     "razorpay": "^2.9.6",
     "redis": "^5.12.1",
     "stripe": "^22.1.0",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "zod": "^4.4.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/ioredis": "^4.28.10",

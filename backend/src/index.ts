@@ -4,6 +4,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { connectDB } from './config/database';
 import { errorHandler, notFound } from './middleware/error';
+import { apiLimiter } from './middleware/rateLimiter';
+import authRoutes from './routes/auth.routes';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 
@@ -19,11 +22,15 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use(cookieParser());
+app.use('/api', apiLimiter);
 
 // Routes
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', message: 'MeterFlow API is running' });
 });
+
+app.use('/api/auth', authRoutes);
 
 // Error Handling
 app.use(notFound);
