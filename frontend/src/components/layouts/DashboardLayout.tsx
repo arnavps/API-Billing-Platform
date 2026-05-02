@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authService } from '../../services/auth.service';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { NotificationCenter } from '../dashboard/NotificationCenter';
 import { 
   LogOut, 
   User as UserIcon, 
@@ -57,6 +58,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
   const navigation = [
     { label: 'Overview', icon: LayoutDashboard, to: '/dashboard' },
+    { label: 'Live Monitor', icon: Activity, to: '/monitor' },
     { label: 'My APIs', icon: Layers, to: '/apis' },
     { label: 'API Keys', icon: Key, to: '/keys' },
     { label: 'Analytics', icon: BarChart3, to: '/analytics' },
@@ -138,9 +140,6 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             <Menu className="h-6 w-6" />
           </button>
 
-import { NotificationCenter } from '../dashboard/NotificationCenter';
-
-// ... inside header ...
           <div className="flex items-center space-x-4 ml-auto">
             <NotificationCenter />
             <Link 

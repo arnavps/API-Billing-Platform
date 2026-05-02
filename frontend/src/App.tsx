@@ -14,6 +14,7 @@ import Analytics from './pages/Analytics';
 import Plans from './pages/Plans';
 import BillingDashboard from './pages/BillingDashboard';
 import StripeSuccess from './pages/StripeSuccess';
+import RealTimeDashboard from './pages/dashboard/RealTimeDashboard';
 
 import { DocsLayout } from './pages/docs/DocsLayout';
 import { DocsHome } from './pages/docs/DocsHome';
@@ -49,6 +50,7 @@ function App() {
           <Route path="/apis/new" element={<CreateAPIWizard />} />
           <Route path="/apis/:id" element={<APIDetails />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/monitor" element={<RealTimeDashboard />} />
           <Route path="/plans" element={<Plans />} />
           <Route path="/billing/success" element={<StripeSuccess />} />
           <Route path="/dashboard/settings/billing" element={<BillingDashboard />} />

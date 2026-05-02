@@ -42,6 +42,8 @@ export interface IAPI extends Document {
       enabled: boolean;
       maxRequests: number;
       windowMs: number;
+      strategy: 'sliding_window' | 'token_bucket' | 'leaky_bucket';
+      burstCapacity?: number;
     };
     authentication: {
       type: 'none' | 'api_key' | 'oauth' | 'bearer';
@@ -178,6 +180,12 @@ const apiSchema = new Schema(
         enabled: { type: Boolean, default: true },
         maxRequests: { type: Number, default: 100 },
         windowMs: { type: Number, default: 60000 },
+        strategy: { 
+          type: String, 
+          enum: ['sliding_window', 'token_bucket', 'leaky_bucket'],
+          default: 'sliding_window'
+        },
+        burstCapacity: { type: Number, default: 0 },
       },
       authentication: {
         type: {

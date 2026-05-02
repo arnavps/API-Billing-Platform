@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { JobService } from '../../services/job.service';
+import { SocketService } from '../../services/socket.service';
 
 export const logUsage = async (req: Request, res: Response, next: NextFunction) => {
   const { api, apiKeyDoc, proxyResponse, requestId, startTime } = req;
@@ -34,6 +35,12 @@ export const logUsage = async (req: Request, res: Response, next: NextFunction) 
   try {
     // Add to queue for background processing
     await JobService.queueLogRequest(logData);
+
+    // Emit real-time event to the dashboard
+    SocketService.emitToUser(api.userId.toString(), 'new_request', {
+      ...logData,
+      apiName: api.name // Add name for UI display convenience
+    });
   } catch (error) {
     console.error('Failed to queue usage log:', error);
   }
