@@ -94,7 +94,7 @@ const CheckoutForm: React.FC<PaymentFormProps> = ({ clientSecret, onSuccess, onC
         <div className="flex flex-col items-center justify-center py-4 text-emerald-400 gap-3">
           <CheckCircle2 className="w-12 h-12 animate-in zoom-in duration-300" />
           <p className="font-medium text-lg">Payment Succeeded!</p>
-          <p className="text-sm text-slate-400">Updating your records...</p>
+          <p className="text-sm text-slate-400">Updating your records</p>
         </div>
       ) : (
         <div className="flex gap-3 pt-2">
