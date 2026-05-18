@@ -1,6 +1,6 @@
 <div align="center">
 
-# MeterFlow
+# MeterFlow.
 
 ### Monetize Your APIs Like Stripe. Track Usage Like AWS.
 
